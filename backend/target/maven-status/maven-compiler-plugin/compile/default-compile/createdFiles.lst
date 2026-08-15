@@ -1,4 +1,0 @@
-com\wilderness\backend\BackendApplication.class
-com\wilderness\backend\common\ApiResponse.class
-com\wilderness\backend\controller\HealthController.class
-com\wilderness\backend\config\CorsConfig.class
