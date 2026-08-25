@@ -45,8 +45,8 @@ watch(() => route.params.slug, load, { immediate: true })
 	<main>
 		<section class="section-block">
 			<div class="section-heading">
-				<p class="eyebrow">03</p>
-				<h3>{{ language === 'zh' ? '分类详情' : 'Category Detail' }}</h3>
+				<p class="eyebrow">{{ language === 'zh' ? '星表索引' : 'CELESTIAL INDEX' }}</p>
+				<h3>{{ language === 'zh' ? '分类档案' : 'Category file' }}</h3>
 			</div>
 
 			<p v-if="status === 'loading'" class="loading-hint">{{ language === 'zh' ? '加载中…' : 'Loading…' }}</p>
@@ -82,7 +82,7 @@ watch(() => route.params.slug, load, { immediate: true })
 							<div class="object-copy">
 								<h4>{{ language === 'zh' ? object.zhName : object.enName }}</h4>
 								<p>{{ language === 'zh' ? object.zhDescription : object.enDescription }}</p>
-								<a class="secondary-button" :href="`/object/${object.slug}`">{{ language === 'zh' ? '查看详情' : 'View details' }}</a>
+								<RouterLink class="secondary-button" :to="`/object/${object.slug}`">{{ language === 'zh' ? '查看详情' : 'View details' }}</RouterLink>
 							</div>
 						</article>
 					</div>

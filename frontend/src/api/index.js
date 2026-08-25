@@ -25,11 +25,16 @@ export class ApiError extends Error {
 	}
 }
 
-async function request(path, { timeout = DEFAULT_TIMEOUT } = {}) {
+async function request(path, { method = 'GET', body, headers, timeout = DEFAULT_TIMEOUT } = {}) {
 	const controller = new AbortController()
 	const timer = setTimeout(() => controller.abort(), timeout)
 	try {
-		const response = await fetch(BASE + path, { signal: controller.signal })
+		const response = await fetch(BASE + path, {
+			method,
+			body,
+			headers,
+			signal: controller.signal
+		})
 		const body = await response.json().catch(() => null)
 		if (!response.ok || !body || body.success === false) {
 			throw new ApiError(body?.message || `Request failed: ${response.status}`, response.status)
@@ -43,10 +48,48 @@ async function request(path, { timeout = DEFAULT_TIMEOUT } = {}) {
 	}
 }
 
+/**
+ * 打开 AI 问答的 SSE 流式连接(后端为 GET 端点,可用 EventSource)。
+ * - onSources(sourceList):检索到的引文(先于回答推送)
+ * - onDelta(text):回答的增量片段
+ * - onDone():连接结束
+ * 返回 EventSource,便于前端主动关闭。
+ */
+export function openChatStream(question, { webEnabled = false, onSources, onDelta, onDone }) {
+	const es = new EventSource(
+		`${BASE}/api/ai/chat/stream?question=${encodeURIComponent(question)}&webEnabled=${webEnabled}`
+	)
+	es.addEventListener('sources', (e) => {
+		try {
+			onSources(JSON.parse(e.data))
+		} catch {
+			/* 忽略解析失败的来源事件 */
+		}
+	})
+	es.addEventListener('delta', (e) => onDelta(e.data))
+	es.onerror = () => {
+		es.close()
+		onDone()
+	}
+	return es
+}
+
 export const api = {
 	getCategories: () => request('/api/categories'),
 	getCategory: (slug) => request(`/api/categories/${encodeURIComponent(slug)}`),
 	getObjects: (categorySlug) => request(`/api/objects?category=${encodeURIComponent(categorySlug)}`),
 	getObject: (slug) => request(`/api/objects/${encodeURIComponent(slug)}`),
-	search: (q) => request(`/api/search?q=${encodeURIComponent(q)}`)
+	search: (q) => request(`/api/search?q=${encodeURIComponent(q)}`),
+	chat: (question, webEnabled = false) =>
+		request('/api/ai/chat', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ question, webSearchEnabled: webEnabled })
+		}),
+	explain: (slug) => request(`/api/ai/explain/${encodeURIComponent(slug)}`),
+	uploadKnowledge: (file) => {
+		const form = new FormData()
+		form.append('file', file)
+		return request('/api/knowledge/upload', { method: 'POST', body: form, timeout: 60000 })
+	}
 }

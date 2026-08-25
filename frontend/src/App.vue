@@ -18,13 +18,14 @@ function toggleLanguage() {
 		<header class="topbar">
 			<div>
 				<p class="eyebrow">Astronomy / 科普</p>
-				<h1>宇宙是旷野</h1>
+				<h1 class="site-title">宇宙是旷野</h1>
 			</div>
 			<div class="topbar-actions">
 				<nav class="topnav" aria-label="Primary">
-					<a class="topnav-link" href="/">首页</a>
-					<a class="topnav-link" href="/categories">分类页</a>
-					<a class="topnav-link" href="/detail/star">详情页</a>
+					<RouterLink class="topnav-link" to="/">{{ language === 'zh' ? '首页' : 'Home' }}</RouterLink>
+					<RouterLink class="topnav-link" to="/categories">{{ language === 'zh' ? '星表' : 'Index' }}</RouterLink>
+					<RouterLink class="topnav-link" to="/detail/planet">{{ language === 'zh' ? '行星' : 'Planets' }}</RouterLink>
+					<RouterLink class="topnav-link" to="/ask">{{ language === 'zh' ? 'AI 问答' : 'Ask AI' }}</RouterLink>
 				</nav>
 				<div class="toolbar-group">
 					<ThemeSelector v-model="theme" :language="language" />
