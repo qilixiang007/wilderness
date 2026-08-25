@@ -5,6 +5,7 @@ frontend/.vite/
 
 # Java / backend
 backend/target/
+backend/bin/
 backend/.gradle/
 
 # IDE and OS
