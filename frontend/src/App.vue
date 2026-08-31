@@ -1,16 +1,33 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ThemeSelector from './components/ThemeSelector.vue'
 import BackButton from './components/BackButton.vue'
 
 const route = useRoute()
-const language = ref('zh')
 const theme = ref('deep-space')
+const { locale, t } = useI18n()
 
 function toggleLanguage() {
-	language.value = language.value === 'zh' ? 'en' : 'zh'
+	locale.value = locale.value === 'zh' ? 'en' : 'zh'
 }
+
+// 语言切换即持久化，刷新后保持；页面标题跟随语言。
+function updateTitle() {
+	document.title = t(route.meta?.titleKey ?? 'site.title')
+}
+
+watch(locale, (value) => {
+	try {
+		localStorage.setItem('wilderness-locale', value)
+	} catch {
+		/* 存储不可用时仅内存态 */
+	}
+	updateTitle()
+})
+
+watch(() => route.path, updateTitle, { immediate: true })
 </script>
 
 <template>
@@ -18,28 +35,28 @@ function toggleLanguage() {
 		<header class="topbar">
 			<div>
 				<p class="eyebrow">Astronomy / 科普</p>
-				<h1 class="site-title">宇宙是旷野</h1>
+				<h1 class="site-title">{{ $t('site.title') }}</h1>
 			</div>
 			<div class="topbar-actions">
 				<nav class="topnav" aria-label="Primary">
-					<RouterLink class="topnav-link" to="/">{{ language === 'zh' ? '首页' : 'Home' }}</RouterLink>
-					<RouterLink class="topnav-link" to="/categories">{{ language === 'zh' ? '星表' : 'Index' }}</RouterLink>
-					<RouterLink class="topnav-link" to="/detail/planet">{{ language === 'zh' ? '行星' : 'Planets' }}</RouterLink>
-					<RouterLink class="topnav-link" to="/ask">{{ language === 'zh' ? 'AI 问答' : 'Ask AI' }}</RouterLink>
+					<RouterLink class="topnav-link" to="/">{{ $t('nav.home') }}</RouterLink>
+					<RouterLink class="topnav-link" to="/categories">{{ $t('nav.categories') }}</RouterLink>
+					<RouterLink class="topnav-link" to="/detail/planet">{{ $t('nav.planets') }}</RouterLink>
+					<RouterLink class="topnav-link" to="/ask">{{ $t('nav.ask') }}</RouterLink>
+					<RouterLink class="topnav-link" to="/search">{{ $t('nav.search') }}</RouterLink>
+					<RouterLink class="topnav-link" to="/favorites">{{ $t('nav.favorites') }}</RouterLink>
 				</nav>
 				<div class="toolbar-group">
-					<ThemeSelector v-model="theme" :language="language" />
+					<ThemeSelector v-model="theme" />
 					<button class="language-toggle" type="button" @click="toggleLanguage">
-						{{ language === 'zh' ? 'EN' : '中文' }}
+						{{ locale === 'zh' ? 'EN' : '中文' }}
 					</button>
 				</div>
 			</div>
 		</header>
 
-		<BackButton v-if="route.path !== '/'" :language="language" />
+		<BackButton v-if="route.path !== '/'" />
 
-		<RouterView v-slot="{ Component }">
-			<component :is="Component" :language="language" />
-		</RouterView>
+		<RouterView />
 	</div>
 </template>

@@ -1,11 +1,14 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { api, ApiUnavailableError, ApiError } from '../api'
+import { pick } from '../i18n'
+import { useFavorites } from '../composables/useFavorites'
 import OfflineNotice from '../components/OfflineNotice.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 
-const props = defineProps({ language: { type: String, required: true } })
+const { t } = useI18n()
 
 // AI 讲解:基于知识库生成科普讲解
 const explainStatus = ref('idle') // idle | loading | ready | error
@@ -23,7 +26,7 @@ async function loadExplain() {
 		explainStatus.value = 'ready'
 	} catch (e) {
 		explainError.value =
-			e instanceof ApiError ? e.message : props.language === 'zh' ? '生成失败，请重试。' : 'Failed to generate.'
+			e instanceof ApiError ? e.message : t('object.generateFailed')
 		explainStatus.value = 'error'
 	}
 }
@@ -32,6 +35,10 @@ const route = useRoute()
 const object = ref(null)
 const status = ref('loading') // loading | ready | offline | error | notfound
 const error = ref('')
+
+// 收藏（localStorage 持久化）
+const { isFavorite, toggle } = useFavorites()
+const fav = computed(() => isFavorite(object.value?.slug))
 
 async function load() {
 	const slug = route.params.slug
@@ -60,74 +67,79 @@ watch(() => route.params.slug, load, { immediate: true })
 	<main>
 		<section class="section-block">
 			<div class="section-heading">
-				<p class="eyebrow">{{ language === 'zh' ? '天体档案' : 'OBJECT FILE' }}</p>
-				<h3>{{ language === 'zh' ? '天体详情' : 'Object file' }}</h3>
+				<p class="eyebrow">{{ $t('object.file') }}</p>
+				<h3>{{ $t('object.file') }}</h3>
 			</div>
 
-			<p v-if="status === 'loading'" class="loading-hint">{{ language === 'zh' ? '加载中…' : 'Loading…' }}</p>
+			<p v-if="status === 'loading'" class="loading-hint">{{ $t('common.loading') }}</p>
 
 			<div v-else-if="status === 'error'" class="load-error">
-				<p>{{ error || (language === 'zh' ? '加载失败，请重试。' : 'Failed to load. Please retry.') }}</p>
+				<p>{{ error || $t('common.loadFailed') }}</p>
 				<button class="secondary-button" type="button" @click="load">
-					{{ language === 'zh' ? '重试' : 'Retry' }}
+					{{ $t('common.retry') }}
 				</button>
 			</div>
 
-			<p v-else-if="status === 'notfound'" class="detail-missing">{{ language === 'zh' ? '未找到该天体。' : 'Celestial object not found.' }}</p>
+			<p v-else-if="status === 'notfound'" class="detail-missing">{{ $t('object.notFound') }}</p>
 
 			<div v-else-if="status === 'offline'" class="load-error">
-				<OfflineNotice :language="language" />
-				<p>{{ language === 'zh' ? '后端不可用，暂无该天体的离线数据。' : 'Backend unreachable; no offline data for this object.' }}</p>
+				<OfflineNotice />
+				<p>{{ $t('object.offline') }}</p>
 			</div>
 
 			<template v-else-if="object">
 				<article class="info-card detail-card">
 					<div class="detail-visual">
-						<img :src="object.image" :alt="language === 'zh' ? object.zhName : object.enName" />
+						<img :src="object.image" :alt="pick(object.zhName, object.enName)" />
 					</div>
 					<p class="detail-category-link">
-						<RouterLink :to="`/detail/${object.category.slug}`">← {{ language === 'zh' ? object.category.zhName : object.category.enName }}</RouterLink>
+						<RouterLink :to="`/detail/${object.category.slug}`">← {{ pick(object.category.zhName, object.category.enName) }}</RouterLink>
 					</p>
-					<h4>{{ language === 'zh' ? object.zhName : object.enName }}</h4>
-					<p>{{ language === 'zh' ? object.zhDescription : object.enDescription }}</p>
+					<div class="object-title-row">
+						<h4>{{ pick(object.zhName, object.enName) }}</h4>
+						<button class="favorite-btn" type="button" @click="toggle(object)">
+							{{ fav ? $t('favorites.remove') : $t('favorites.add') }}
+						</button>
+					</div>
+					<p>{{ pick(object.zhDescription, object.enDescription) }}</p>
 				</article>
 
 				<div v-if="object.facts && object.facts.length" class="section-heading compact object-heading">
-					<h4>{{ language === 'zh' ? '关键数据' : 'Key facts' }}</h4>
+					<h4>{{ $t('object.keyFacts') }}</h4>
 				</div>
 				<dl v-if="object.facts && object.facts.length" class="facts-list">
 					<div v-for="fact in object.facts" :key="fact.sortOrder" class="fact-row">
-						<dt>{{ language === 'zh' ? fact.zhLabel : fact.enLabel }}</dt>
-						<dd>{{ language === 'zh' ? fact.zhValue : fact.enValue }}</dd>
+						<dt>{{ pick(fact.zhLabel, fact.enLabel) }}</dt>
+						<dd>{{ pick(fact.zhValue, fact.enValue) }}</dd>
 					</div>
 				</dl>
 
 				<div class="section-heading compact object-heading">
-					<h4>{{ language === 'zh' ? 'AI 讲解' : 'AI explainer' }}</h4>
+					<h4>{{ $t('object.aiExplainer') }}</h4>
 				</div>
 
 				<div v-if="explainStatus === 'idle'" class="explain-prompt">
-					<p>{{ language === 'zh' ? '让 AI 结合知识库，为你生成一篇关于该天体的科普讲解。' : 'Let AI write a science explainer for this object based on the knowledge base.' }}</p>
+					<p>{{ $t('object.explainPrompt') }}</p>
 					<button class="secondary-button" type="button" @click="loadExplain">
-						{{ language === 'zh' ? '生成讲解' : 'Generate' }}
+						{{ $t('object.generate') }}
 					</button>
 				</div>
 
 				<p v-else-if="explainStatus === 'loading'" class="loading-hint">
-					{{ language === 'zh' ? 'AI 正在生成讲解…' : 'AI is writing…' }}
+					{{ $t('object.generating') }}
 				</p>
 
 				<div v-else-if="explainStatus === 'error'" class="load-error">
 					<p>{{ explainError }}</p>
 					<button class="secondary-button" type="button" @click="loadExplain">
-						{{ language === 'zh' ? '重试' : 'Retry' }}
+						{{ $t('common.retry') }}
 					</button>
 				</div>
 
 				<article v-else class="info-card explain-card">
 					<MarkdownView :content="explanation" />
 					<div v-if="explainSources.length" class="explain-sources">
-						<span class="sources-label">{{ language === 'zh' ? '资料来源' : 'Sources' }}</span>
+						<span class="sources-label">{{ $t('common.sources') }}</span>
 						<RouterLink
 							v-for="(s, si) in explainSources"
 							:key="si"
@@ -145,6 +157,28 @@ watch(() => route.params.slug, load, { immediate: true })
 </template>
 
 <style scoped>
+.object-title-row {
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+	flex-wrap: wrap;
+}
+
+.favorite-btn {
+	background: var(--button-bg);
+	border: 1px solid var(--button-border);
+	color: var(--text);
+	border-radius: 999px;
+	padding: 0.3rem 0.85rem;
+	font-size: 0.82rem;
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.favorite-btn:hover {
+	background: var(--panel-glow);
+}
+
 .explain-prompt {
 	margin: 0.25rem 0 1rem;
 	color: var(--muted);

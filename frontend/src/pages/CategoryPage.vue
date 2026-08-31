@@ -1,10 +1,12 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { api, ApiUnavailableError, ApiError } from '../api'
 import { celestialCategories } from '../data/celestial'
+import { pick } from '../i18n'
 import OfflineNotice from '../components/OfflineNotice.vue'
 
-const props = defineProps({ language: { type: String, required: true } })
+const { t } = useI18n()
 
 const categories = ref([])
 const loading = ref(true)
@@ -24,7 +26,7 @@ async function load() {
 		} else if (e instanceof ApiError) {
 			error.value = e.message
 		} else {
-			error.value = props.language === 'zh' ? '加载失败，请重试。' : 'Failed to load. Please retry.'
+			error.value = t('common.loadFailed')
 		}
 	} finally {
 		loading.value = false
@@ -38,34 +40,34 @@ onMounted(load)
 	<main>
 		<section class="section-block">
 			<div class="section-heading">
-				<p class="eyebrow">{{ language === 'zh' ? '星表索引' : 'CELESTIAL INDEX' }}</p>
-				<h3>{{ language === 'zh' ? '天体分类' : 'Celestial Categories' }}</h3>
-				<p>{{ language === 'zh' ? '按类型浏览这片旷野里的一切。' : 'Browse everything in this wilderness, by type.' }}</p>
+				<p class="eyebrow">{{ $t('category.indexKicker') }}</p>
+				<h3>{{ $t('category.title') }}</h3>
+				<p>{{ $t('category.intro') }}</p>
 			</div>
 
-			<p v-if="loading" class="loading-hint">{{ language === 'zh' ? '加载中…' : 'Loading…' }}</p>
+			<p v-if="loading" class="loading-hint">{{ $t('common.loading') }}</p>
 
 			<div v-else-if="error" class="load-error">
 				<p>{{ error }}</p>
 				<button class="secondary-button" type="button" @click="load">
-					{{ language === 'zh' ? '重试' : 'Retry' }}
+					{{ $t('common.retry') }}
 				</button>
 			</div>
 
 			<template v-else>
-				<OfflineNotice v-if="offline" :language="language" />
+				<OfflineNotice v-if="offline" />
 				<div class="card-grid category-grid">
 					<article v-for="item in categories" :key="item.slug" class="info-card category-card">
 						<div class="category-visual">
-							<img :src="item.image" :alt="language === 'zh' ? item.imageAltZh : item.imageAltEn" />
+							<img :src="item.image" :alt="pick(item.imageAltZh, item.imageAltEn)" />
 						</div>
 						<div class="category-copy">
-							<h4>{{ language === 'zh' ? item.zhName : item.enName }}</h4>
+							<h4>{{ pick(item.zhName, item.enName) }}</h4>
 							<span class="catalog-tag">
-								{{ language === 'zh' ? `${item.objectCount} 个天体` : `${item.objectCount} objects` }}
+								{{ $t('common.objects', { n: item.objectCount }) }}
 							</span>
-							<p>{{ language === 'zh' ? item.zhDescription : item.enDescription }}</p>
-							<RouterLink class="secondary-button" :to="`/detail/${item.slug}`">{{ language === 'zh' ? '查看详情' : 'View details' }}</RouterLink>
+							<p>{{ pick(item.zhDescription, item.enDescription) }}</p>
+							<RouterLink class="secondary-button" :to="`/detail/${item.slug}`">{{ $t('common.viewDetails') }}</RouterLink>
 						</div>
 					</article>
 				</div>

@@ -3,9 +3,8 @@ import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, ApiUnavailableError, ApiError } from '../api'
 import { celestialCategories } from '../data/celestial'
+import { pick } from '../i18n'
 import OfflineNotice from '../components/OfflineNotice.vue'
-
-const props = defineProps({ language: { type: String, required: true } })
 
 const route = useRoute()
 const category = ref(null)
@@ -45,48 +44,48 @@ watch(() => route.params.slug, load, { immediate: true })
 	<main>
 		<section class="section-block">
 			<div class="section-heading">
-				<p class="eyebrow">{{ language === 'zh' ? '星表索引' : 'CELESTIAL INDEX' }}</p>
-				<h3>{{ language === 'zh' ? '分类档案' : 'Category file' }}</h3>
+				<p class="eyebrow">{{ $t('category.indexKicker') }}</p>
+				<h3>{{ $t('category.file') }}</h3>
 			</div>
 
-			<p v-if="status === 'loading'" class="loading-hint">{{ language === 'zh' ? '加载中…' : 'Loading…' }}</p>
+			<p v-if="status === 'loading'" class="loading-hint">{{ $t('common.loading') }}</p>
 
 			<div v-else-if="status === 'error'" class="load-error">
-				<p>{{ error || (language === 'zh' ? '加载失败，请重试。' : 'Failed to load. Please retry.') }}</p>
+				<p>{{ error || $t('common.loadFailed') }}</p>
 				<button class="secondary-button" type="button" @click="load">
-					{{ language === 'zh' ? '重试' : 'Retry' }}
+					{{ $t('common.retry') }}
 				</button>
 			</div>
 
-			<p v-else-if="status === 'notfound'" class="detail-missing">{{ language === 'zh' ? '未找到该天体分类。' : 'Category not found.' }}</p>
+			<p v-else-if="status === 'notfound'" class="detail-missing">{{ $t('category.notFound') }}</p>
 
 			<template v-else-if="category">
-				<OfflineNotice v-if="status === 'offline'" :language="language" />
+				<OfflineNotice v-if="status === 'offline'" />
 				<article class="info-card detail-card">
 					<div class="detail-visual">
-						<img :src="category.image" :alt="language === 'zh' ? category.imageAltZh : category.imageAltEn" />
+						<img :src="category.image" :alt="pick(category.imageAltZh, category.imageAltEn)" />
 					</div>
-					<h4>{{ language === 'zh' ? category.zhName : category.enName }}</h4>
-					<p>{{ language === 'zh' ? category.zhDescription : category.enDescription }}</p>
+					<h4>{{ pick(category.zhName, category.enName) }}</h4>
+					<p>{{ pick(category.zhDescription, category.enDescription) }}</p>
 				</article>
 
 				<template v-if="status === 'ready'">
 					<div class="section-heading compact object-heading">
-						<h4>{{ language === 'zh' ? '天体列表' : 'Objects' }}</h4>
+						<h4>{{ $t('object.objects') }}</h4>
 					</div>
 					<div v-if="category.objects && category.objects.length" class="card-grid object-card-grid">
 						<article v-for="object in category.objects" :key="object.slug" class="info-card object-card">
 							<div class="object-visual">
-								<img :src="object.image" :alt="language === 'zh' ? object.zhName : object.enName" />
+								<img :src="object.image" :alt="pick(object.zhName, object.enName)" />
 							</div>
 							<div class="object-copy">
-								<h4>{{ language === 'zh' ? object.zhName : object.enName }}</h4>
-								<p>{{ language === 'zh' ? object.zhDescription : object.enDescription }}</p>
-								<RouterLink class="secondary-button" :to="`/object/${object.slug}`">{{ language === 'zh' ? '查看详情' : 'View details' }}</RouterLink>
+								<h4>{{ pick(object.zhName, object.enName) }}</h4>
+								<p>{{ pick(object.zhDescription, object.enDescription) }}</p>
+								<RouterLink class="secondary-button" :to="`/object/${object.slug}`">{{ $t('common.viewDetails') }}</RouterLink>
 							</div>
 						</article>
 					</div>
-					<p v-else class="detail-missing">{{ language === 'zh' ? '该分类下暂无天体。' : 'No objects in this category yet.' }}</p>
+					<p v-else class="detail-missing">{{ $t('category.noObjects') }}</p>
 				</template>
 			</template>
 		</section>

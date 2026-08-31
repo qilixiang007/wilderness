@@ -1,15 +1,12 @@
 <script setup>
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { openChatStream, api, ApiUnavailableError } from '../api'
 import MarkdownView from '../components/MarkdownView.vue'
 
-const props = defineProps({ language: { type: String, required: true } })
+const { t, tm } = useI18n()
 
-const suggestions = [
-	'太阳系里最大的行星是哪颗？',
-	'为什么星星会眨眼？',
-	'什么是暗物质？'
-]
+const suggestions = computed(() => tm('ask.suggestions'))
 
 const messages = ref([]) // { role: 'user' | 'assistant', content, sources }
 const input = ref('')
@@ -33,8 +30,8 @@ async function onFileChange(event) {
 	} catch (err) {
 		uploadError.value =
 			err instanceof ApiUnavailableError
-				? props.language === 'zh' ? '后端不可用，请确认服务已启动。' : 'Backend unreachable.'
-				: err.message || (props.language === 'zh' ? '上传失败。' : 'Upload failed.')
+				? t('ask.backendUnavailable')
+				: err.message || t('ask.uploadFailed')
 	} finally {
 		uploading.value = false
 		event.target.value = ''
@@ -78,36 +75,28 @@ function send() {
 	<main>
 		<section class="section-block ask-section">
 			<div class="section-heading">
-				<p class="eyebrow">{{ language === 'zh' ? 'AI 问答 · 知识库 RAG' : 'AI ASSISTANT · RAG' }}</p>
-				<h3>{{ language === 'zh' ? '向旷野提问' : 'Ask the wilderness' }}</h3>
-				<p>
-					{{ language === 'zh'
-						? '基于站内天文知识库的 AI 问答。混合检索（关键词 + 语义）定位资料，回答会标注资料来源。'
-						: 'Ask about astronomy. Our assistant grounds its answers in the in-house knowledge base via hybrid retrieval, with cited sources.' }}
-				</p>
+				<p class="eyebrow">{{ $t('ask.kicker') }}</p>
+				<h3>{{ $t('ask.title') }}</h3>
+				<p>{{ $t('ask.intro') }}</p>
 			</div>
 
 			<div class="upload-bar">
 				<label class="upload-btn" :class="{ disabled: uploading }">
 					{{
 						uploading
-							? language === 'zh' ? '入库中…' : 'Uploading…'
-							: language === 'zh' ? '上传文件到知识库' : 'Upload file'
+							? $t('ask.uploading')
+							: $t('ask.uploadFile')
 					}}
 					<input type="file" accept=".txt,.md,.pdf,.docx,.xls,.xlsx" :disabled="uploading" @change="onFileChange" />
 				</label>
 				<span v-if="uploadResult" class="upload-ok">
-					{{
-						language === 'zh'
-							? `已入库「${uploadResult.fileName}」，${uploadResult.chunkCount} 个分块`
-							: `Ingested "${uploadResult.fileName}" (${uploadResult.chunkCount} chunks)`
-					}}
+					{{ $t('ask.uploaded', { fileName: uploadResult.fileName, chunkCount: uploadResult.chunkCount }) }}
 				</span>
 				<span v-if="uploadError" class="upload-err">{{ uploadError }}</span>
 			</div>
 
 			<div v-if="messages.length === 0" class="ask-empty">
-				<p>{{ language === 'zh' ? '试试这样问：' : 'Try asking:' }}</p>
+				<p>{{ $t('ask.tryAsking') }}</p>
 				<div class="ask-suggestions">
 					<button
 						v-for="q in suggestions"
@@ -136,7 +125,7 @@ function send() {
 						v-if="msg.role === 'assistant' && msg.sources && msg.sources.length"
 						class="chat-sources"
 					>
-						<span class="sources-label">{{ language === 'zh' ? '资料来源' : 'Sources' }}</span>
+						<span class="sources-label">{{ $t('common.sources') }}</span>
 						<a
 							v-for="(s, si) in msg.sources.filter((x) => x.type === 'web')"
 							:key="si"
@@ -165,13 +154,11 @@ function send() {
 				<label class="web-toggle" :class="{ checked: webSearch }">
 					<input v-model="webSearch" type="checkbox" :disabled="streaming" />
 					<span class="toggle-track"><span class="toggle-thumb"></span></span>
-					<span class="toggle-label">{{
-						language === 'zh' ? '联网检索' : 'Web search'
-					}}</span>
+					<span class="toggle-label">{{ $t('ask.webSearch') }}</span>
 				</label>
 				<input
 					v-model="input"
-					:placeholder="language === 'zh' ? '输入你的天文问题…' : 'Ask a question about space…'"
+					:placeholder="$t('ask.placeholder')"
 					:disabled="streaming"
 				/>
 				<button
@@ -181,8 +168,8 @@ function send() {
 				>
 					{{
 						streaming
-							? language === 'zh' ? '思考中…' : 'Thinking…'
-							: language === 'zh' ? '发送' : 'Send'
+							? $t('ask.thinking')
+							: $t('ask.send')
 					}}
 				</button>
 			</form>

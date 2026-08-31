@@ -1,0 +1,97 @@
+// 中文字典：所有 UI 文案集中于此，key 与 en.js 一一对应。
+export default {
+	site: {
+		title: '宇宙是旷野'
+	},
+	nav: {
+		home: '首页',
+		categories: '星表',
+		planets: '行星',
+		ask: 'AI 问答',
+		search: '搜索',
+		favorites: '收藏'
+	},
+	common: {
+		loading: '加载中…',
+		retry: '重试',
+		back: '← 返回上一页',
+		viewDetails: '查看详情',
+		sources: '资料来源',
+		loadFailed: '加载失败，请重试。',
+		objects: '{n} 个天体'
+	},
+	home: {
+		heroKicker: '旷野观星 · 天文科普',
+		headline: '把浩瀚宇宙，讲给每个人听。',
+		description: '中英双语的星空导览：从恒星到星云，按分类浏览，再慢慢深入每个天体的数据与故事。',
+		exploreNow: '开始探索',
+		startWithPlanets: '从行星看起',
+		visitSun: '看看太阳',
+		ask: 'AI 问答',
+		catalogued: '星表已收录',
+		stats: '{categories} 个分类 · {objects} 个天体',
+		statsFallback: '6 个分类 · 16 个天体',
+		observerNotes: '观星导览',
+		whereToStart: '从这里出发',
+		intro: '从头顶的星座到亿万光年外的星系，慢慢认识这片旷野。先从分类开始浏览，或直接看看你好奇的天体。',
+		fromBackend: '来自后端：{categories} 个分类 · {objects} 个天体'
+	},
+	category: {
+		indexKicker: '星表索引',
+		title: '天体分类',
+		intro: '按类型浏览这片旷野里的一切。',
+		file: '分类档案',
+		notFound: '未找到该天体分类。',
+		noObjects: '该分类下暂无天体。'
+	},
+	object: {
+		file: '天体详情',
+		keyFacts: '关键数据',
+		aiExplainer: 'AI 讲解',
+		explainPrompt: '让 AI 结合知识库，为你生成一篇关于该天体的科普讲解。',
+		generate: '生成讲解',
+		generating: 'AI 正在生成讲解…',
+		generateFailed: '生成失败，请重试。',
+		notFound: '未找到该天体。',
+		offline: '后端不可用，暂无该天体的离线数据。',
+		objects: '天体列表'
+	},
+	ask: {
+		kicker: 'AI 问答 · 知识库 RAG',
+		title: '向旷野提问',
+		intro: '基于站内天文知识库的 AI 问答。混合检索（关键词 + 语义）定位资料，回答会标注资料来源。',
+		uploading: '入库中…',
+		uploadFile: '上传文件到知识库',
+		uploaded: '已入库「{fileName}」，{chunkCount} 个分块',
+		backendUnavailable: '后端不可用，请确认服务已启动。',
+		uploadFailed: '上传失败。',
+		tryAsking: '试试这样问：',
+		suggestions: ['太阳系里最大的行星是哪颗？', '为什么星星会眨眼？', '什么是暗物质？'],
+		webSearch: '联网检索',
+		placeholder: '输入你的天文问题…',
+		thinking: '思考中…',
+		send: '发送'
+	},
+	theme: {
+		switcher: '主题切换'
+	},
+	offline: {
+		notice: '离线模式：后端未连接，显示本地缓存内容。'
+	},
+	search: {
+		kicker: '站内检索',
+		title: '搜索',
+		placeholder: '搜索天体名称或描述…',
+		submit: '搜索',
+		emptyHint: '输入关键词搜索天体，例如「火星」「木星」。',
+		noResults: '没有找到与「{q}」相关的天体。',
+		offline: '后端不可用，无法搜索。',
+		failed: '搜索失败，请重试。'
+	},
+	favorites: {
+		title: '我的收藏',
+		add: '☆ 收藏',
+		remove: '★ 已收藏',
+		empty: '还没有收藏任何天体。去详情页点「收藏」吧。'
+	}
+}

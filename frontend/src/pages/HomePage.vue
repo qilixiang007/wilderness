@@ -3,8 +3,6 @@ import { onMounted, ref } from 'vue'
 import { api } from '../api'
 import { celestialCategories } from '../data/celestial'
 
-defineProps({ language: { type: String, required: true } })
-
 const stats = ref(null)
 
 onMounted(async () => {
@@ -27,22 +25,22 @@ onMounted(async () => {
 		<section class="hero">
 			<div class="hero-copy">
 				<p class="eyebrow hero-kicker">
-					{{ language === 'zh' ? '旷野观星 · 天文科普' : 'A FIELD GUIDE TO THE COSMOS' }}
+					{{ $t('home.heroKicker') }}
 				</p>
-				<h2>{{ language === 'zh' ? '把浩瀚宇宙，讲给每个人听。' : 'Explaining the universe to everyone.' }}</h2>
-				<p>{{ language === 'zh' ? '中英双语的星空导览：从恒星到星云，按分类浏览，再慢慢深入每个天体的数据与故事。' : 'A bilingual tour of the night sky — from stars to nebulae, browsable by category and rich with data and stories.' }}</p>
+				<h2>{{ $t('home.headline') }}</h2>
+				<p>{{ $t('home.description') }}</p>
 				<div class="hero-actions">
 					<button class="primary-button" type="button" @click="$router.push('/categories')">
-						{{ language === 'zh' ? '开始探索' : 'Explore now' }}
+						{{ $t('home.exploreNow') }}
 					</button>
 					<button class="secondary-button" type="button" @click="$router.push('/detail/planet')">
-						{{ language === 'zh' ? '从行星看起' : 'Start with planets' }}
+						{{ $t('home.startWithPlanets') }}
 					</button>
 					<button class="secondary-button" type="button" @click="$router.push('/object/sun')">
-						{{ language === 'zh' ? '看看太阳' : 'Visit the Sun' }}
+						{{ $t('home.visitSun') }}
 					</button>
 					<button class="secondary-button" type="button" @click="$router.push('/ask')">
-						{{ language === 'zh' ? 'AI 问答' : 'Ask AI' }}
+						{{ $t('home.ask') }}
 					</button>
 				</div>
 			</div>
@@ -76,22 +74,22 @@ onMounted(async () => {
 				</svg>
 
 				<div class="hero-stat">
-					<span>{{ language === 'zh' ? '星表已收录' : 'CATALOGUED' }}</span>
+					<span>{{ $t('home.catalogued') }}</span>
 					<strong v-if="stats">
-						{{ language === 'zh' ? `${stats.categories} 个分类 · ${stats.objects} 个天体` : `${stats.categories} categories · ${stats.objects} objects` }}
+						{{ $t('home.stats', { categories: stats.categories, objects: stats.objects }) }}
 					</strong>
-					<strong v-else>{{ language === 'zh' ? '6 个分类 · 16 个天体' : '6 categories · 16 objects' }}</strong>
+					<strong v-else>{{ $t('home.statsFallback') }}</strong>
 				</div>
 			</div>
 		</section>
 
 		<section class="section-block">
 			<div class="section-heading">
-				<p class="eyebrow">{{ language === 'zh' ? '观星导览' : "OBSERVER'S NOTES" }}</p>
-				<h3>{{ language === 'zh' ? '从这里出发' : 'Where to start' }}</h3>
-				<p>{{ language === 'zh' ? '从头顶的星座到亿万光年外的星系，慢慢认识这片旷野。先从分类开始浏览，或直接看看你好奇的天体。' : 'From the constellations overhead to galaxies billions of light-years away, get to know the wilderness above. Start by category, or jump straight to an object you are curious about.' }}</p>
+				<p class="eyebrow">{{ $t('home.observerNotes') }}</p>
+				<h3>{{ $t('home.whereToStart') }}</h3>
+				<p>{{ $t('home.intro') }}</p>
 				<p v-if="stats" class="home-stats">
-					{{ language === 'zh' ? `来自后端：${stats.categories} 个分类 · ${stats.objects} 个天体` : `From backend: ${stats.categories} categories · ${stats.objects} objects` }}
+					{{ $t('home.fromBackend', { categories: stats.categories, objects: stats.objects }) }}
 				</p>
 			</div>
 		</section>

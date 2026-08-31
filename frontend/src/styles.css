@@ -292,6 +292,13 @@ button {
 	background-repeat: no-repeat;
 }
 
+/* 原生下拉展开列表:深色主题下系统默认白底会配上浅色文字导致看不见,
+   这里让选项跟随主题变量(深邃风=深底浅字,其余主题自动适配) */
+.theme-select option {
+	background-color: var(--bg-soft);
+	color: var(--text);
+}
+
 .primary-button {
 	color: var(--accent-contrast);
 	background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
