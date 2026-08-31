@@ -11,6 +11,7 @@ backend/.gradle/
 # IDE and OS
 .vscode/
 .idea/
+.claude/
 .DS_Store
 Thumbs.db
 
@@ -20,3 +21,5 @@ Thumbs.db
 # Local env
 .env
 .env.*
+# 但保留 .env.example 作为配置模板提交
+!.env.example

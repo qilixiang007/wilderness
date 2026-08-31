@@ -12,6 +12,11 @@ services:
       - '3307:3306'
     volumes:
       - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   redis:
     image: redis:7-alpine
@@ -22,6 +27,11 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.19.1
@@ -37,6 +47,51 @@ services:
       - '9200:9200'
     volumes:
       - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    container_name: wilderness-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      # 容器内服务名互连（默认 localhost 是容器自身）
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/wilderness?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: wilderness
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-wilderness}
+      SPRING_DATA_REDIS_HOST: redis
+      WILDERNESS_AI_ELASTICSEARCH_HOST: elasticsearch
+      # 密钥从宿主机 .env 透传,不写死在镜像里
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-wilderness}
+    ports:
+      - '8080:8080'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+
+  frontend:
+    build: ./frontend
+    container_name: wilderness-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '80:80'
 
   prometheus:
     image: prom/prometheus:v2.54.0
