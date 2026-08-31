@@ -50,6 +50,10 @@ wilderness:
     web:
       max-results: 3
       max-characters: 1500
+    langsmith:
+      endpoint: https://api.smith.langchain.com
+      api-key: ${LANGSMITH_API_KEY:}
+      project: ${LANGSMITH_PROJECT:wilderness}
 
 springdoc:
   api-docs:
