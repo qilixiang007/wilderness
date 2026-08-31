@@ -46,14 +46,22 @@ public class DataSeeder implements CommandLineRunner {
 				categoryRepository.count(), celestialObjectRepository.count());
 	}
 
-	// ---- 图片（与前端静态数据一致的真实公开图片 URL，天体沿用所属分类图，后续可再精化） ----
+	// ---- 图片：全部为本地静态资源（backend/src/main/resources/static/images/，经 /images/* 提供），
+	// 不依赖外部图床，离线可用。分类用代表图；天体尽量用各自真实照片。 ----
 
-	private static final String IMG_STAR = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg/1280px-The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg";
-	private static final String IMG_PLANET = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1280px-The_Earth_seen_from_Apollo_17.jpg";
-	private static final String IMG_MOON = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/1280px-FullMoon2010.jpg";
-	private static final String IMG_GALAXY = "https://images-assets.nasa.gov/image/NGC_1300/NGC_1300~orig.jpg";
-	private static final String IMG_NEBULA = "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000600/GSFC_20171208_Archive_e000600~orig.jpg";
-	private static final String IMG_SMALL = "https://images-assets.nasa.gov/image/PIA18695/PIA18695~orig.jpg";
+	private static final String IMG_STAR = "/images/sun.jpg";
+	private static final String IMG_SIRIUS = "/images/sirius.jpg";
+	private static final String IMG_BETELGEUSE = "/images/betelgeuse.jpg";
+	private static final String IMG_PLANET = "/images/earth.jpg";
+	private static final String IMG_MARS = "/images/mars.jpg";
+	private static final String IMG_JUPITER = "/images/jupiter.jpg";
+	private static final String IMG_SATURN = "/images/saturn.jpg";
+	private static final String IMG_MOON = "/images/moon.jpg";
+	private static final String IMG_TITAN = "/images/titan.jpg";
+	private static final String IMG_EUROPA = "/images/europa.jpg";
+	private static final String IMG_GALAXY = "/images/galaxy.jpg";
+	private static final String IMG_NEBULA = "/images/nebula.jpg";
+	private static final String IMG_SMALL = "/images/comet.jpg";
 
 	private Map<String, Category> seedCategories() {
 		Map<String, Category> bySlug = new LinkedHashMap<>();
@@ -104,7 +112,7 @@ public class DataSeeder implements CommandLineRunner {
 		save(object("sirius", "天狼星", "Sirius",
 				"天狼星是夜空中最亮的恒星，位于大犬座，距地球约 8.6 光年。",
 				"Sirius is the brightest star in the night sky, located in Canis Major about 8.6 light-years away.",
-				IMG_STAR, 1, categories.get("star"),
+				IMG_SIRIUS, 1, categories.get("star"),
 				fact(1, "类型", "Type", "恒星", "Star"),
 				fact(2, "星座", "Constellation", "大犬座", "Canis Major"),
 				fact(3, "距地球", "Distance from Earth", "约 8.6 光年", "about 8.6 light-years"),
@@ -113,7 +121,7 @@ public class DataSeeder implements CommandLineRunner {
 		save(object("betelgeuse", "参宿四", "Betelgeuse",
 				"参宿四是猎户座肩部的红超巨星，体积巨大，正处于演化后期。",
 				"Betelgeuse is a red supergiant on Orion's shoulder, a massive star in its late evolutionary stage.",
-				IMG_STAR, 2, categories.get("star"),
+				IMG_BETELGEUSE, 2, categories.get("star"),
 				fact(1, "类型", "Type", "红超巨星", "Red supergiant"),
 				fact(2, "距地球", "Distance from Earth", "约 642 光年", "about 642 light-years"),
 				fact(3, "半径", "Radius", "约为太阳的 700 倍", "about 700 times the Sun's radius"),
@@ -132,7 +140,7 @@ public class DataSeeder implements CommandLineRunner {
 		save(object("mars", "火星", "Mars",
 				"火星是太阳系第四颗行星，因表面含铁氧化物而呈红色，是人类探测最多的星球之一。",
 				"Mars is the fourth planet from the Sun, red from iron oxide, and one of the most explored worlds.",
-				IMG_PLANET, 1, categories.get("planet"),
+				IMG_MARS, 1, categories.get("planet"),
 				fact(1, "类型", "Type", "岩质行星", "Terrestrial planet"),
 				fact(2, "距太阳", "Distance from Sun", "约 2.28 亿千米", "about 228 million km"),
 				fact(3, "半径", "Radius", "约 3,390 千米", "about 3,390 km"),
@@ -142,7 +150,7 @@ public class DataSeeder implements CommandLineRunner {
 		save(object("jupiter", "木星", "Jupiter",
 				"木星是太阳系最大的行星，以其巨大的气态球体和标志性的大红斑著称。",
 				"Jupiter is the largest planet in the Solar System, famous for its Great Red Spot.",
-				IMG_PLANET, 2, categories.get("planet"),
+				IMG_JUPITER, 2, categories.get("planet"),
 				fact(1, "类型", "Type", "气态巨行星", "Gas giant"),
 				fact(2, "距太阳", "Distance from Sun", "约 7.78 亿千米", "about 778 million km"),
 				fact(3, "半径", "Radius", "约 69,911 千米", "about 69,911 km"),
@@ -152,7 +160,7 @@ public class DataSeeder implements CommandLineRunner {
 		save(object("saturn", "土星", "Saturn",
 				"土星以壮丽的光环闻名，是太阳系中密度最低的行星之一。",
 				"Saturn is renowned for its magnificent rings and is one of the least dense planets.",
-				IMG_PLANET, 3, categories.get("planet"),
+				IMG_SATURN, 3, categories.get("planet"),
 				fact(1, "类型", "Type", "气态巨行星", "Gas giant"),
 				fact(2, "距太阳", "Distance from Sun", "约 14.3 亿千米", "about 1.43 billion km"),
 				fact(3, "半径", "Radius", "约 58,232 千米", "about 58,232 km"),
@@ -171,7 +179,7 @@ public class DataSeeder implements CommandLineRunner {
 		save(object("titan", "泰坦", "Titan",
 				"泰坦是土星最大的卫星，拥有浓厚大气和甲烷湖泊，被视为寻找生命迹象的重要目标。",
 				"Titan is Saturn's largest moon, with a thick atmosphere and methane lakes.",
-				IMG_MOON, 1, categories.get("moon"),
+				IMG_TITAN, 1, categories.get("moon"),
 				fact(1, "类型", "Type", "天然卫星", "Natural satellite"),
 				fact(2, "属于", "Orbits", "土星", "Saturn"),
 				fact(3, "半径", "Radius", "约 2,575 千米", "about 2,575 km"),
@@ -180,7 +188,7 @@ public class DataSeeder implements CommandLineRunner {
 		save(object("europa", "欧罗巴", "Europa",
 				"欧罗巴是木星的一颗冰卫星，科学家认为其冰壳下存在液态海洋。",
 				"Europa is an icy moon of Jupiter thought to hide a liquid ocean beneath its crust.",
-				IMG_MOON, 2, categories.get("moon"),
+				IMG_EUROPA, 2, categories.get("moon"),
 				fact(1, "类型", "Type", "天然卫星", "Natural satellite"),
 				fact(2, "属于", "Orbits", "木星", "Jupiter"),
 				fact(3, "半径", "Radius", "约 1,560 千米", "about 1,560 km"),

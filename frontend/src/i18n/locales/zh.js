@@ -4,12 +4,10 @@ export default {
 		title: '宇宙是旷野'
 	},
 	nav: {
-		home: '首页',
-		categories: '星表',
-		planets: '行星',
+		explore: '开始探索',
 		ask: 'AI 问答',
-		search: '搜索',
-		favorites: '收藏'
+		favorites: '我的收藏',
+		menu: '打开菜单'
 	},
 	common: {
 		loading: '加载中…',
@@ -70,7 +68,13 @@ export default {
 		webSearch: '联网检索',
 		placeholder: '输入你的天文问题…',
 		thinking: '思考中…',
-		send: '发送'
+		send: '发送',
+		myFiles: '我的文件',
+		noFiles: '还没有上传过文件',
+		deleteFile: '删除',
+		deleteFailed: '删除失败',
+		chars: '字',
+		chunks: '块'
 	},
 	theme: {
 		switcher: '主题切换'
@@ -92,6 +96,38 @@ export default {
 		title: '我的收藏',
 		add: '☆ 收藏',
 		remove: '★ 已收藏',
-		empty: '还没有收藏任何天体。去详情页点「收藏」吧。'
+		empty: '还没有收藏任何天体。去详情页点「收藏」吧。',
+		needLogin: '登录后才能查看收藏',
+		offline: '后端不可用，无法加载收藏'
+	},
+	auth: {
+		kicker: '账号 · 数据隔离',
+		title: '登录 / 注册',
+		intro: '用任意邮箱（QQ / 163 / 谷歌等）注册登录。收藏与上传的知识库文件按账号保存，互不可见。',
+		loginTitle: '登录',
+		registerTitle: '注册',
+		email: '邮箱',
+		password: '密码',
+		passwordHint: '密码至少 6 位',
+		code: '验证码',
+		codePlaceholder: '6 位数字验证码',
+		sendCode: '发送验证码',
+		resendIn: '重新发送 ({s}s)',
+		codeSent: '验证码已发送到你的邮箱',
+		codeLogHint: '开发模式：验证码已记录到服务端日志（未发送邮件），请看后端控制台',
+		registerCodeOptional: '可留空（当前未要求邮箱验证）',
+		tabPassword: '密码登录',
+		tabCode: '验证码登录',
+		login: '登录',
+		register: '注册',
+		submitting: '提交中…',
+		logout: '退出登录',
+		loginToUpload: '登录后上传文件到个人知识库',
+		emailRequired: '请输入邮箱',
+		passwordRequired: '请输入密码',
+		codeRequired: '请输入验证码',
+		passwordTooShort: '密码至少 6 位',
+		sendCodeFailed: '验证码发送失败',
+		loginFailed: '登录失败'
 	}
 }

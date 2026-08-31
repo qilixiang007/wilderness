@@ -8,7 +8,7 @@
 
 const BASE = import.meta.env.VITE_API_BASE ?? ''
 
-const DEFAULT_TIMEOUT = 4000
+const DEFAULT_TIMEOUT = 8000
 
 export class ApiUnavailableError extends Error {
 	constructor(message = 'Backend unreachable') {
@@ -26,25 +26,40 @@ export class ApiError extends Error {
 }
 
 async function request(path, { method = 'GET', body, headers, timeout = DEFAULT_TIMEOUT } = {}) {
-	const controller = new AbortController()
-	const timer = setTimeout(() => controller.abort(), timeout)
+	const fullUrl = BASE + path
+	// 极老的内核/受限 WebView 可能缺少 fetch，会抛 ReferenceError（请求根本没发出）。
+	// 这里给出明确原因便于定位。
+	if (typeof fetch !== 'function') {
+		console.error('[api] 当前环境缺少 fetch，无法发起请求')
+		throw new ApiUnavailableError('env-no-fetch')
+	}
+	// AbortController 缺失时退化为「无超时」请求，保证老环境也能发请求。
+	const canAbort = typeof AbortController === 'function'
+	const controller = canAbort ? new AbortController() : null
+	const timer = canAbort ? setTimeout(() => controller.abort(), timeout) : null
 	try {
-		const response = await fetch(BASE + path, {
+		const response = await fetch(fullUrl, {
 			method,
 			body,
 			headers,
-			signal: controller.signal
+			// 会话基于 HttpOnly Cookie，跨源(VITE_API_BASE)时也要带上 cookie
+			credentials: 'include',
+			...(controller ? { signal: controller.signal } : {})
 		})
-		const body = await response.json().catch(() => null)
-		if (!response.ok || !body || body.success === false) {
-			throw new ApiError(body?.message || `Request failed: ${response.status}`, response.status)
+		// 响应体变量名用 data，避免与请求参数 body 撞名触发 TDZ（Cannot access 'body' before initialization）
+		const data = await response.json().catch(() => null)
+		if (!response.ok || !data || data.success === false) {
+			throw new ApiError(data?.message || `Request failed: ${response.status}`, response.status)
 		}
-		return body.data
+		return data.data
 	} catch (error) {
 		if (error instanceof ApiError) throw error
-		throw new ApiUnavailableError()
+		// 透传底层错误（AbortError=超时、TypeError=网络失败、ReferenceError=缺少全局对象…）
+		// 连同完整请求 URL，便于前端定位。
+		console.error(`[api] request failed: ${fullUrl}`, error)
+		throw new ApiUnavailableError(`${error?.name || 'NetworkError'}: ${error?.message || ''} @ ${fullUrl}`)
 	} finally {
-		clearTimeout(timer)
+		if (timer !== null) clearTimeout(timer)
 	}
 }
 
@@ -91,5 +106,39 @@ export const api = {
 		const form = new FormData()
 		form.append('file', file)
 		return request('/api/knowledge/upload', { method: 'POST', body: form, timeout: 60000 })
-	}
+	},
+	// —— 认证 ——
+	verifyCode: (email, purpose) =>
+		request('/api/auth/verify-code', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, purpose })
+		}),
+	register: (email, password, code) =>
+		request('/api/auth/register', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, password, code: code || null })
+		}),
+	loginPassword: (email, password) =>
+		request('/api/auth/login-password', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, password })
+		}),
+	loginCode: (email, code) =>
+		request('/api/auth/login-code', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, code })
+		}),
+	logout: () => request('/api/auth/logout', { method: 'POST' }),
+	me: () => request('/api/auth/me'),
+	// —— 收藏（按用户隔离）——
+	getFavorites: () => request('/api/favorites'),
+	addFavorite: (slug) => request(`/api/favorites/${encodeURIComponent(slug)}`, { method: 'PUT' }),
+	removeFavorite: (slug) => request(`/api/favorites/${encodeURIComponent(slug)}`, { method: 'DELETE' }),
+	// —— 个人知识库文件 ——
+	getKnowledgeFiles: () => request('/api/knowledge/files'),
+	deleteKnowledgeFile: (id) => request(`/api/knowledge/files/${id}`, { method: 'DELETE' })
 }

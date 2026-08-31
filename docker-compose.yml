@@ -75,6 +75,13 @@ services:
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
       LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-wilderness}
+      # 邮箱验证码 SMTP + 登录有效期
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      AUTH_SESSION_TTL: ${AUTH_SESSION_TTL:-604800}
     ports:
       - '8080:8080'
     healthcheck:

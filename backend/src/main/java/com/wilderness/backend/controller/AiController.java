@@ -2,6 +2,7 @@ package com.wilderness.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wilderness.backend.ai.RagService;
+import com.wilderness.backend.auth.AuthContext;
 import com.wilderness.backend.common.ApiResponse;
 import com.wilderness.backend.dto.ChatRequest;
 import com.wilderness.backend.dto.ChatResponse;
@@ -37,17 +38,21 @@ public class AiController {
     /** AI 问答:混合检索(+可选联网)+ 生成,返回回答与引文来源。 */
     @PostMapping("/chat")
     public ApiResponse<ChatResponse> chat(@RequestBody ChatRequest request) throws Exception {
-        return ApiResponse.ok(ragService.chat(request.question(), request.webSearchEnabled()));
+        // 请求线程读取 userId(拦截器写入 AuthContext),传参给 service 做知识库隔离
+        return ApiResponse.ok(ragService.chat(request.question(), request.webSearchEnabled(), AuthContext.currentUserId()));
     }
 
     /** AI 流式问答(SSE):先推 sources 事件,再逐段推 delta,结束自动关闭连接。 */
     @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(@RequestParam("question") String question,
                                  @RequestParam(value = "webEnabled", defaultValue = "false") boolean webEnabled) {
+        // 关键:检索发生在 executor 线程,ThreadLocal 不跨线程,必须在请求线程先取 userId
+        Long userId = AuthContext.currentUserId();
         SseEmitter emitter = new SseEmitter(0L);
         executor.execute(() -> ragService.streamChat(
                 question,
                 webEnabled,
+                userId,
                 chunk -> safeSend(emitter, "delta", chunk),
                 sources -> safeSend(emitter, "sources", toJson(sources)),
                 emitter::completeWithError,
@@ -58,7 +63,7 @@ public class AiController {
     /** AI 讲解:针对单个天体,结合知识库资料生成科普讲解。 */
     @GetMapping("/explain/{slug}")
     public ApiResponse<ExplainResponse> explain(@PathVariable String slug) throws Exception {
-        return ApiResponse.ok(ragService.explain(slug));
+        return ApiResponse.ok(ragService.explain(slug, AuthContext.currentUserId()));
     }
 
     private String toJson(Object o) {

@@ -1,0 +1,67 @@
+package com.wilderness.backend.auth;
+
+import com.wilderness.backend.config.AuthProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.Duration;
+import java.util.concurrent.ThreadLocalRandom;
+
+/**
+ * 邮箱验证码：发送（限流）与校验（一次性）。
+ * Redis 键：
+ * - {@code verify:{email}:{purpose}} → 6 位数字码，TTL=code-ttl
+ * - {@code verify:ratelimit:{email}} → 限流标记，TTL=verify-code-rate-limit
+ */
+@Service
+public class VerifyCodeService {
+
+	private static final Logger log = LoggerFactory.getLogger(VerifyCodeService.class);
+	private static final String CODE_KEY = "verify:";
+	private static final String RATE_KEY = "verify:ratelimit:";
+
+	private final StringRedisTemplate redis;
+	private final AuthProperties props;
+	private final EmailService emailService;
+
+	public VerifyCodeService(StringRedisTemplate redis, AuthProperties props, EmailService emailService) {
+		this.redis = redis;
+		this.props = props;
+		this.emailService = emailService;
+	}
+
+	/**
+	 * 发送验证码到指定邮箱；同一邮箱在限流间隔内重复调用返回 429。
+	 * 返回投递方式：email=已发真实邮件；log=开发模式，验证码只打进服务端日志、未发邮件。
+	 * 调用方应据此如实告知用户验证码在哪，绝不虚构"已发送到邮箱"。
+	 */
+	public String sendCode(String email, String purpose) {
+		Boolean first = redis.opsForValue()
+				.setIfAbsent(RATE_KEY + email, "1", Duration.ofSeconds(props.verifyCodeRateLimit()));
+		if (Boolean.FALSE.equals(first)) {
+			throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "发送太频繁，请稍后再试");
+		}
+		String code = String.format("%06d", ThreadLocalRandom.current().nextInt(1_000_000));
+		redis.opsForValue().set(CODE_KEY + email + ":" + purpose, code, Duration.ofSeconds(props.codeTtl()));
+		if (props.devCodeLog()) {
+			log.info("[dev-code-log] 验证码 email={} purpose={} code={}（开发模式：未发送邮件）", email, purpose, code);
+			return "log";
+		}
+		emailService.sendCode(email, code);
+		return "email";
+	}
+
+	/** 校验验证码；错误/过期抛 400。校验成功即删除（一次性使用）。 */
+	public void verify(String email, String purpose, String code) {
+		String key = CODE_KEY + email + ":" + purpose;
+		String expected = redis.opsForValue().get(key);
+		if (expected == null || code == null || !expected.equals(code)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "验证码错误或已过期");
+		}
+		redis.delete(key);
+	}
+}

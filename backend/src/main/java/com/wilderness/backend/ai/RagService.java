@@ -54,10 +54,10 @@ public class RagService {
         this.indexName = indexManager.indexName();
     }
 
-    public ChatResponse chat(String question, boolean webSearchEnabled) throws Exception {
+    public ChatResponse chat(String question, boolean webSearchEnabled, Long userId) throws Exception {
         RunRef run = tracer.start("rag.chat", "chain", Map.of("question", question, "webSearchEnabled", webSearchEnabled));
         try {
-            List<Content> contents = retrieveWithWeb(question, webSearchEnabled);
+            List<Content> contents = retrieveWithWeb(question, webSearchEnabled, userId);
             List<AiSource> sources = toSources(contents);
             String answer = assistant.chat(question, formatSources(contents));
             ChatResponse response = new ChatResponse(answer, sources);
@@ -78,13 +78,14 @@ public class RagService {
      */
     public void streamChat(String question,
                            boolean webSearchEnabled,
+                           Long userId,
                            Consumer<String> onDelta,
                            Consumer<List<AiSource>> onSources,
                            Consumer<Throwable> onError,
                            Runnable onDone) {
         RunRef run = tracer.start("rag.stream_chat", "chain", Map.of("question", question, "webSearchEnabled", webSearchEnabled));
         try {
-            List<Content> contents = retrieveWithWeb(question, webSearchEnabled);
+            List<Content> contents = retrieveWithWeb(question, webSearchEnabled, userId);
             List<AiSource> sources = toSources(contents);
             onSources.accept(sources);
             assistant.chatStream(question, formatSources(contents))
@@ -112,8 +113,8 @@ public class RagService {
      * 本地混合检索;开启联网时把联网结果作为补充资料并入上下文。
      * 联网条目以 type=web 标记,slug 存网页 URL,前端据此渲染为外部链接。
      */
-    private List<Content> retrieveWithWeb(String question, boolean webSearchEnabled) throws Exception {
-        List<Content> contents = new ArrayList<>(retriever.retrieve(Query.from(question)));
+    private List<Content> retrieveWithWeb(String question, boolean webSearchEnabled, Long userId) throws Exception {
+        List<Content> contents = new ArrayList<>(retriever.retrieve(Query.from(question), userId));
         if (webSearchEnabled) {
             for (WebResult r : webSearchService.search(question)) {
                 Metadata meta = new Metadata()
@@ -128,12 +129,14 @@ public class RagService {
         return contents;
     }
 
-    public ExplainResponse explain(String slug) throws Exception {
+    public ExplainResponse explain(String slug, Long userId) throws Exception {
         RunRef run = tracer.start("rag.explain", "chain", Map.of("slug", slug));
         try {
             SearchResponse<Map> resp = es.search(s -> s
                             .index(indexName)
-                            .query(q -> q.term(t -> t.field("slug").value(slug)))
+                            .query(q -> q.bool(b -> b
+                                    .must(m -> m.term(t -> t.field("slug").value(slug)))
+                                    .filter(userFilter(userId))))
                             .size(50)
                             .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name"))),
                     Map.class);
@@ -209,5 +212,17 @@ public class RagService {
 
     private String str(Object o) {
         return o == null ? null : String.valueOf(o);
+    }
+
+    /** 与 {@link HybridContentRetriever} 相同的用户隔离过滤(此处独立实现,避免暴露内部)。 */
+    private co.elastic.clients.elasticsearch._types.query_dsl.Query userFilter(Long userId) {
+        if (userId == null) {
+            return co.elastic.clients.elasticsearch._types.query_dsl.Query.of(q -> q.bool(b -> b
+                    .mustNot(mn -> mn.exists(e -> e.field("user_id")))));
+        }
+        return co.elastic.clients.elasticsearch._types.query_dsl.Query.of(q -> q.bool(b -> b
+                .should(s -> s.bool(sb -> sb.mustNot(mn -> mn.exists(e -> e.field("user_id")))))
+                .should(s -> s.term(t -> t.field("user_id").value(String.valueOf(userId))))
+                .minimumShouldMatch("1")));
     }
 }

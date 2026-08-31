@@ -1,10 +1,12 @@
 <script setup>
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { openChatStream, api, ApiUnavailableError } from '../api'
 import MarkdownView from '../components/MarkdownView.vue'
+import { useAuth } from '../composables/useAuth'
 
 const { t, tm } = useI18n()
+const { isLoggedIn } = useAuth()
 
 const suggestions = computed(() => tm('ask.suggestions'))
 
@@ -27,6 +29,7 @@ async function onFileChange(event) {
 	uploadResult.value = null
 	try {
 		uploadResult.value = await api.uploadKnowledge(file)
+		loadFiles()
 	} catch (err) {
 		uploadError.value =
 			err instanceof ApiUnavailableError
@@ -37,6 +40,41 @@ async function onFileChange(event) {
 		event.target.value = ''
 	}
 }
+
+// —— 我的文件（按用户隔离，仅登录可见）——
+const myFiles = ref([])
+const deletingId = ref(null)
+
+async function loadFiles() {
+	if (!isLoggedIn.value) {
+		myFiles.value = []
+		return
+	}
+	try {
+		myFiles.value = await api.getKnowledgeFiles()
+	} catch {
+		myFiles.value = []
+	}
+}
+
+async function deleteFile(file) {
+	if (deletingId.value) return
+	deletingId.value = file.id
+	try {
+		await api.deleteKnowledgeFile(file.id)
+		myFiles.value = myFiles.value.filter((f) => f.id !== file.id)
+	} catch (err) {
+		uploadError.value = err.message || t('ask.deleteFailed')
+	} finally {
+		deletingId.value = null
+	}
+}
+
+onMounted(loadFiles)
+watch(isLoggedIn, (v) => {
+	if (v) loadFiles()
+	else myFiles.value = []
+})
 
 async function scrollToBottom() {
 	await nextTick()
@@ -81,18 +119,34 @@ function send() {
 			</div>
 
 			<div class="upload-bar">
-				<label class="upload-btn" :class="{ disabled: uploading }">
-					{{
-						uploading
-							? $t('ask.uploading')
-							: $t('ask.uploadFile')
-					}}
-					<input type="file" accept=".txt,.md,.pdf,.docx,.xls,.xlsx" :disabled="uploading" @change="onFileChange" />
-				</label>
-				<span v-if="uploadResult" class="upload-ok">
-					{{ $t('ask.uploaded', { fileName: uploadResult.fileName, chunkCount: uploadResult.chunkCount }) }}
-				</span>
-				<span v-if="uploadError" class="upload-err">{{ uploadError }}</span>
+				<template v-if="isLoggedIn">
+					<label class="upload-btn" :class="{ disabled: uploading }">
+						{{
+							uploading
+								? $t('ask.uploading')
+								: $t('ask.uploadFile')
+						}}
+						<input type="file" accept=".txt,.md,.pdf,.docx,.xls,.xlsx" :disabled="uploading" @change="onFileChange" />
+					</label>
+					<span v-if="uploadResult" class="upload-ok">
+						{{ $t('ask.uploaded', { fileName: uploadResult.fileName, chunkCount: uploadResult.chunkCount }) }}
+					</span>
+					<span v-if="uploadError" class="upload-err">{{ uploadError }}</span>
+				</template>
+				<RouterLink v-else class="upload-btn login-to-upload" :to="'/login?redirect=/ask'">
+					{{ $t('auth.loginToUpload') }}
+				</RouterLink>
+			</div>
+
+			<div v-if="isLoggedIn" class="file-list">
+				<p v-if="myFiles.length === 0" class="file-list-empty">{{ $t('ask.noFiles') }}</p>
+				<div v-for="f in myFiles" :key="f.id" class="file-row">
+					<span class="file-name" :title="f.fileName">{{ f.fileName }}</span>
+					<span class="file-meta">{{ f.charCount }} {{ $t('ask.chars') }} · {{ f.chunkCount }} {{ $t('ask.chunks') }}</span>
+					<button class="file-delete" type="button" :disabled="deletingId === f.id" @click="deleteFile(f)">
+						{{ $t('ask.deleteFile') }}
+					</button>
+				</div>
 			</div>
 
 			<div v-if="messages.length === 0" class="ask-empty">
@@ -235,6 +289,70 @@ function send() {
 .upload-err {
 	font-size: 0.85rem;
 	color: var(--muted);
+}
+
+.login-to-upload {
+	text-decoration: none;
+	display: inline-flex;
+}
+
+.file-list {
+	margin: 0.4rem 0 0.9rem;
+	border-top: 1px solid var(--card-border);
+}
+
+.file-list-empty {
+	font-size: 0.85rem;
+	color: var(--muted);
+	padding: 0.6rem 0 0.2rem;
+	margin: 0;
+}
+
+.file-row {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.45rem 0;
+	border-bottom: 1px solid var(--card-border);
+	font-size: 0.85rem;
+}
+
+.file-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text);
+}
+
+.file-meta {
+	flex-shrink: 0;
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
+.file-delete {
+	flex-shrink: 0;
+	padding: 0.25rem 0.7rem;
+	border: 1px solid var(--button-border);
+	border-radius: 999px;
+	background: var(--button-bg);
+	color: var(--muted);
+	font: inherit;
+	font-size: 0.78rem;
+	cursor: pointer;
+	transition: background 0.2s ease, color 0.2s ease;
+}
+
+.file-delete:hover {
+	background: var(--panel-glow);
+	color: var(--danger, #e57373);
+}
+
+.file-delete:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
 }
 
 .ask-empty {

@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { api, ApiUnavailableError } from '../api'
@@ -26,21 +26,29 @@ async function search() {
 		results.value = await api.search(term)
 		status.value = 'ready'
 	} catch (e) {
+		// 后端不可用时带上底层错误名（AbortError=超时 / TypeError=网络失败或 CORS），方便定位
 		error.value =
 			e instanceof ApiUnavailableError
-				? t('search.offline')
+				? `${t('search.offline')} (${e.message})`
 				: e.message || t('search.failed')
 		status.value = 'error'
 	}
 }
 
-// 支持从 URL ?q= 深链进入并直接搜索
-onMounted(() => {
-	if (route.query.q) {
-		q.value = route.query.q
-		search()
-	}
-})
+// 支持从 URL ?q= 深链进入并直接搜索；顶栏再次搜索时 query 变化也会重新触发。
+// 监听整个 query 对象：同词重复搜索时 App.vue 会追加 t=时间戳 强制产生新导航，
+// 这里也能收到（watch 引用值变化即触发）。
+watch(
+	() => route.query,
+	(query) => {
+		const queryQ = query.q
+		if (typeof queryQ === 'string' && queryQ.trim()) {
+			q.value = queryQ
+			search()
+		}
+	},
+	{ immediate: true }
+)
 </script>
 
 <template>
@@ -50,21 +58,6 @@ onMounted(() => {
 				<p class="eyebrow">{{ $t('search.kicker') }}</p>
 				<h3>{{ $t('search.title') }}</h3>
 			</div>
-
-			<form class="search-form" @submit.prevent="search">
-				<input
-					v-model="q"
-					:placeholder="$t('search.placeholder')"
-					:disabled="status === 'loading'"
-				/>
-				<button
-					class="primary-button"
-					type="submit"
-					:disabled="status === 'loading' || !q.trim()"
-				>
-					{{ $t('search.submit') }}
-				</button>
-			</form>
 
 			<p v-if="status === 'idle'" class="search-hint">{{ $t('search.emptyHint') }}</p>
 
@@ -99,31 +92,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.search-form {
-	display: flex;
-	gap: 0.6rem;
-	margin-bottom: 0.5rem;
-}
-
-.search-form input {
-	flex: 1;
-	padding: 0.65rem 0.9rem;
-	border-radius: 10px;
-	border: 1px solid var(--button-border);
-	background: var(--card);
-	color: var(--text);
-	font: inherit;
-	outline: none;
-}
-
-.search-form input:focus {
-	border-color: var(--accent);
-}
-
-.search-form input:disabled {
-	opacity: 0.6;
-}
-
 .search-hint {
 	margin: 1.5rem 0;
 	color: var(--muted);

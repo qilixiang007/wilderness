@@ -4,12 +4,10 @@ export default {
 		title: 'Wilderness of the Universe'
 	},
 	nav: {
-		home: 'Home',
-		categories: 'Index',
-		planets: 'Planets',
+		explore: 'Explore',
 		ask: 'Ask AI',
-		search: 'Search',
-		favorites: 'Favorites'
+		favorites: 'Favorites',
+		menu: 'Open menu'
 	},
 	common: {
 		loading: 'Loading…',
@@ -70,7 +68,13 @@ export default {
 		webSearch: 'Web search',
 		placeholder: 'Ask a question about space…',
 		thinking: 'Thinking…',
-		send: 'Send'
+		send: 'Send',
+		myFiles: 'My files',
+		noFiles: 'No files uploaded yet',
+		deleteFile: 'Delete',
+		deleteFailed: 'Delete failed.',
+		chars: 'chars',
+		chunks: 'chunks'
 	},
 	theme: {
 		switcher: 'Theme switcher'
@@ -92,6 +96,38 @@ export default {
 		title: 'Favorites',
 		add: '☆ Favorite',
 		remove: '★ Favorited',
-		empty: 'Nothing favorited yet. Open an object and tap Favorite.'
+		empty: 'Nothing favorited yet. Open an object and tap Favorite.',
+		needLogin: 'Log in to see your favorites',
+		offline: 'Backend unreachable; favorites unavailable.'
+	},
+	auth: {
+		kicker: 'ACCOUNT · ISOLATED DATA',
+		title: 'Log in / Sign up',
+		intro: 'Sign up with any email (QQ, 163, Gmail, …). Your favorites and uploaded knowledge files are saved per account.',
+		loginTitle: 'Log in',
+		registerTitle: 'Sign up',
+		email: 'Email',
+		password: 'Password',
+		passwordHint: 'At least 6 characters',
+		code: 'Code',
+		codePlaceholder: '6-digit code',
+		sendCode: 'Send code',
+		resendIn: 'Resend ({s}s)',
+		codeSent: 'Code sent to your email',
+		codeLogHint: 'Dev mode: code logged to server output (no email sent) — check the backend console',
+		registerCodeOptional: 'Optional (email verification not required)',
+		tabPassword: 'Password',
+		tabCode: 'Code',
+		login: 'Log in',
+		register: 'Sign up',
+		submitting: 'Submitting…',
+		logout: 'Log out',
+		loginToUpload: 'Log in to upload files to your personal knowledge base',
+		emailRequired: 'Email is required',
+		passwordRequired: 'Password is required',
+		codeRequired: 'Code is required',
+		passwordTooShort: 'Password must be at least 6 characters',
+		sendCodeFailed: 'Failed to send code',
+		loginFailed: 'Login failed'
 	}
 }

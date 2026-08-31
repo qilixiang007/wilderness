@@ -91,23 +91,26 @@ public class KnowledgeIngestionService {
         int dim = embeddings.isEmpty() ? 0 : embeddings.get(0).vector().length;
         log.info("向量化完成:{} 个向量,维度 {}", embeddings.size(), dim);
 
-        int written = ingestSegments(segments, embeddings);
+        int written = ingestSegments(segments, embeddings, null);
         log.info("入库完成:索引 [{}] 共写入 {} 条记录", indexManager.indexName(), written);
     }
 
     /**
      * 将切块与向量写入 ES(公共复用:内置语料入库与用户上传共用)。
-     * 文档 ID = file_name#块序号,重复执行覆盖同 ID,幂等。
+     * 文档 ID = [userId#]file_name#块序号,重复执行覆盖同 ID,幂等;
+     * userId 前缀保证不同用户上传同名文件互不覆盖。
+     * userId 为 null 表示内置公共语料,不写 user_id 字段(检索时对所有用户可见)。
      */
-    public int ingestSegments(List<TextSegment> segments, List<Embedding> embeddings) throws Exception {
+    public int ingestSegments(List<TextSegment> segments, List<Embedding> embeddings, Long userId) throws Exception {
         if (segments.size() != embeddings.size()) {
             throw new IllegalStateException("向量数量与切块数量不一致:" + embeddings.size() + " vs " + segments.size());
         }
         String index = indexManager.indexName();
+        String idPrefix = userId == null ? "" : userId + "#";
         List<BulkOperation> ops = new ArrayList<>();
         for (int i = 0; i < segments.size(); i++) {
             TextSegment seg = segments.get(i);
-            String id = seg.metadata().getString("file_name") + "#" + i;
+            String id = idPrefix + seg.metadata().getString("file_name") + "#" + i;
             Map<String, Object> source = new HashMap<>();
             source.put("content", seg.text());
             source.put("content_vector", embeddings.get(i).vector());
@@ -117,6 +120,9 @@ public class KnowledgeIngestionService {
             source.put("en_name", seg.metadata().getString("en_name"));
             source.put("file_name", seg.metadata().getString("file_name"));
             source.put("chunk_index", i);
+            if (userId != null) {
+                source.put("user_id", String.valueOf(userId));
+            }
             ops.add(BulkOperation.of(o -> o.index(io -> io.index(index).id(id).document(source))));
         }
 

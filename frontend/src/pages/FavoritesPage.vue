@@ -1,8 +1,22 @@
 <script setup>
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useFavorites } from '../composables/useFavorites'
 import { pick } from '../i18n'
 
-const { favorites, toggle } = useFavorites()
+const router = useRouter()
+const { favorites, toggle, load } = useFavorites()
+
+onMounted(() => {
+	load()
+})
+
+async function onToggle(object) {
+	const result = await toggle(object)
+	if (result.needLogin) {
+		router.push('/login')
+	}
+}
 </script>
 
 <template>
@@ -23,7 +37,7 @@ const { favorites, toggle } = useFavorites()
 					<div class="object-copy">
 						<h4>{{ pick(object.zhName, object.enName) }}</h4>
 						<RouterLink class="secondary-button" :to="`/object/${object.slug}`">{{ $t('common.viewDetails') }}</RouterLink>
-						<button class="favorite-remove" type="button" @click="toggle(object)">
+						<button class="favorite-remove" type="button" @click="onToggle(object)">
 							{{ $t('favorites.remove') }}
 						</button>
 					</div>

@@ -27,8 +27,29 @@ spring:
       port: 6379
       database: 0
       timeout: 2000ms
+  # 邮箱验证码 SMTP（QQ/163/谷歌等按服务商填）；不配则发送接口返回 503
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:465}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
 
 wilderness:
+  auth:
+    cookie-name: wilderness_session
+    session-ttl: ${AUTH_SESSION_TTL:604800}
+    cookie-secure: ${AUTH_COOKIE_SECURE:false}
+    code-ttl: 300
+    verify-code-rate-limit: 60
+    from: ${SMTP_FROM:}
+    require-email-verify: false
+    dev-code-log: ${AUTH_DEV_CODE_LOG:false}
   ai:
     dashscope:
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1

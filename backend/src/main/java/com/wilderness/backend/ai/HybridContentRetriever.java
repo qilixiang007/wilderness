@@ -70,14 +70,21 @@ public class HybridContentRetriever implements ContentRetriever {
 
     @Override
     public List<Content> retrieve(Query query) {
+        return retrieve(query, null);
+    }
+
+    /**
+     * 按用户过滤的检索:userId 为 null(未登录)只检公共语料;登录则检「公共 + 自己的」。
+     */
+    public List<Content> retrieve(Query query, Long userId) {
         String question = query.text();
         try {
             Response<Embedding> embResp = embeddingModel.embed(question);
             float[] queryVector = embResp.content().vector();
 
             int candidateSize = topK * 3; // 双路各多召回一些候选,保证融合召回率
-            List<Hit<Map>> keywordHits = searchKeyword(question, candidateSize);
-            List<Hit<Map>> vectorHits = searchVector(queryVector, candidateSize);
+            List<Hit<Map>> keywordHits = searchKeyword(question, candidateSize, userId);
+            List<Hit<Map>> vectorHits = searchVector(queryVector, candidateSize, userId);
             log.info("混合检索完成:question={}, 关键词命中={}, 向量命中={}",
                     question, keywordHits.size(), vectorHits.size());
 
@@ -121,13 +128,30 @@ public class HybridContentRetriever implements ContentRetriever {
         }
     }
 
+    /**
+     * 用户过滤条件:未登录(null)只检「无 user_id 的公共语料」;
+     * 登录检「公共语料 + 本人上传」。两者用 bool should 合并。
+     */
+    private co.elastic.clients.elasticsearch._types.query_dsl.Query userFilter(Long userId) {
+        if (userId == null) {
+            return co.elastic.clients.elasticsearch._types.query_dsl.Query.of(q -> q.bool(b -> b
+                    .mustNot(mn -> mn.exists(e -> e.field("user_id")))));
+        }
+        return co.elastic.clients.elasticsearch._types.query_dsl.Query.of(q -> q.bool(b -> b
+                .should(s -> s.bool(sb -> sb.mustNot(mn -> mn.exists(e -> e.field("user_id")))))
+                .should(s -> s.term(t -> t.field("user_id").value(String.valueOf(userId))))
+                .minimumShouldMatch("1")));
+    }
+
     /** BM25 关键词检索。 */
-    private List<Hit<Map>> searchKeyword(String text, int size) throws Exception {
+    private List<Hit<Map>> searchKeyword(String text, int size, Long userId) throws Exception {
         SearchResponse<Map> resp = es.search(s -> s
                         .index(indexName)
-                        .query(q -> q.multiMatch(m -> m
-                                .query(text)
-                                .fields("content", "zh_name")))
+                        .query(q -> q.bool(b -> b
+                                .must(m -> m.multiMatch(mm -> mm
+                                        .query(text)
+                                        .fields("content", "zh_name")))
+                                .filter(userFilter(userId))))
                         .size(size)
                         .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name"))),
                 Map.class);
@@ -135,14 +159,15 @@ public class HybridContentRetriever implements ContentRetriever {
     }
 
     /** 向量 kNN 检索。 */
-    private List<Hit<Map>> searchVector(float[] vector, int size) throws Exception {
+    private List<Hit<Map>> searchVector(float[] vector, int size, Long userId) throws Exception {
         List<Float> queryVector = new ArrayList<>();
         for (float f : vector) {
             queryVector.add(f);
         }
         SearchResponse<Map> resp = es.search(s -> s
                         .index(indexName)
-                        .knn(k -> k.field("content_vector").queryVector(queryVector).k(size).numCandidates(size * 10))
+                        .knn(k -> k.field("content_vector").queryVector(queryVector).k(size).numCandidates(size * 10)
+                                .filter(userFilter(userId)))
                         .size(size)
                         .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name"))),
                 Map.class);

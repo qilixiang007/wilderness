@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { api, ApiUnavailableError, ApiError } from '../api'
 import { pick } from '../i18n'
@@ -32,13 +32,30 @@ async function loadExplain() {
 }
 
 const route = useRoute()
+const router = useRouter()
 const object = ref(null)
 const status = ref('loading') // loading | ready | offline | error | notfound
 const error = ref('')
+const favBusy = ref(false)
 
-// 收藏（localStorage 持久化）
+// 收藏（按用户存后端，登录态变化时 useFavorites 自动同步）
 const { isFavorite, toggle } = useFavorites()
 const fav = computed(() => isFavorite(object.value?.slug))
+
+async function onToggleFavorite() {
+	if (favBusy.value || !object.value) return
+	favBusy.value = true
+	try {
+		const result = await toggle(object.value)
+		if (result.needLogin) {
+			router.push({ path: '/login', query: { redirect: route.fullPath } })
+		}
+	} catch {
+		/* 网络/后端错误时保持原状态，按钮不闪跳 */
+	} finally {
+		favBusy.value = false
+	}
+}
 
 async function load() {
 	const slug = route.params.slug
@@ -97,7 +114,7 @@ watch(() => route.params.slug, load, { immediate: true })
 					</p>
 					<div class="object-title-row">
 						<h4>{{ pick(object.zhName, object.enName) }}</h4>
-						<button class="favorite-btn" type="button" @click="toggle(object)">
+						<button class="favorite-btn" type="button" :disabled="favBusy" @click="onToggleFavorite">
 							{{ fav ? $t('favorites.remove') : $t('favorites.add') }}
 						</button>
 					</div>

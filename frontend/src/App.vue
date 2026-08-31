@@ -1,17 +1,55 @@
 <script setup>
 import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import Sidebar from './components/Sidebar.vue'
 import ThemeSelector from './components/ThemeSelector.vue'
 import BackButton from './components/BackButton.vue'
+import { useAuth } from './composables/useAuth'
 
 const route = useRoute()
+const router = useRouter()
 const theme = ref('deep-space')
 const { locale, t } = useI18n()
+const { user, isLoggedIn, logout } = useAuth()
+
+// 退出登录：清会话后若在收藏页则回首页
+async function handleLogout() {
+	await logout()
+	if (route.path === '/favorites') {
+		router.push('/')
+	}
+}
+
+// 移动端抽屉开关（桌面固定显示侧边栏）
+const sidebarOpen = ref(false)
+// 顶栏全局搜索
+const searchTerm = ref('')
 
 function toggleLanguage() {
 	locale.value = locale.value === 'zh' ? 'en' : 'zh'
 }
+
+// 顶栏搜索：跳转搜索页并带上关键词（SearchPage 支持 ?q= 深链）
+function goSearch() {
+	const term = searchTerm.value.trim()
+	if (!term) return
+	// 已在搜索页时，vue-router 对相同 query 的 push 会当作重复导航直接跳过，
+	// 导致 SearchPage 收不到 query 变化、不触发搜索；追加时间戳强制产生新导航。
+	const query = route.path === '/search' ? { q: term, t: Date.now() } : { q: term }
+	router.push({ path: '/search', query })
+}
+
+// 在搜索页时，顶栏输入框回填当前关键词（URL 深链 / 返回时保持一致）
+watch(
+	() => route.query.q,
+	(queryQ) => {
+		if (route.path === '/search' && typeof queryQ === 'string') {
+			searchTerm.value = queryQ
+		}
+	},
+	{ immediate: true }
+)
 
 // 语言切换即持久化，刷新后保持；页面标题跟随语言。
 function updateTitle() {
@@ -32,31 +70,75 @@ watch(() => route.path, updateTitle, { immediate: true })
 
 <template>
 	<div class="page-shell" :data-theme="theme">
-		<header class="topbar">
-			<div>
-				<p class="eyebrow">Astronomy / 科普</p>
-				<h1 class="site-title">{{ $t('site.title') }}</h1>
-			</div>
-			<div class="topbar-actions">
-				<nav class="topnav" aria-label="Primary">
-					<RouterLink class="topnav-link" to="/">{{ $t('nav.home') }}</RouterLink>
-					<RouterLink class="topnav-link" to="/categories">{{ $t('nav.categories') }}</RouterLink>
-					<RouterLink class="topnav-link" to="/detail/planet">{{ $t('nav.planets') }}</RouterLink>
-					<RouterLink class="topnav-link" to="/ask">{{ $t('nav.ask') }}</RouterLink>
-					<RouterLink class="topnav-link" to="/search">{{ $t('nav.search') }}</RouterLink>
-					<RouterLink class="topnav-link" to="/favorites">{{ $t('nav.favorites') }}</RouterLink>
-				</nav>
+		<Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
+
+		<div class="main-area">
+			<header class="topbar">
+				<button
+					class="hamburger"
+					type="button"
+					:aria-label="$t('nav.menu')"
+					@click="sidebarOpen = !sidebarOpen"
+				>
+					☰
+				</button>
+				<form class="top-search" role="search" @submit.prevent="goSearch">
+					<input
+						v-model="searchTerm"
+						type="search"
+						:placeholder="$t('search.placeholder')"
+						:aria-label="$t('search.placeholder')"
+					/>
+					<button class="secondary-button" type="submit">
+						{{ $t('search.submit') }}
+					</button>
+				</form>
 				<div class="toolbar-group">
 					<ThemeSelector v-model="theme" />
 					<button class="language-toggle" type="button" @click="toggleLanguage">
 						{{ locale === 'zh' ? 'EN' : '中文' }}
 					</button>
+					<template v-if="isLoggedIn">
+						<span class="user-chip" :title="user.email">{{ user.email }}</span>
+						<button class="auth-link" type="button" @click="handleLogout">
+							{{ $t('auth.logout') }}
+						</button>
+					</template>
+					<RouterLink v-else class="auth-link" to="/login">
+						{{ $t('auth.loginTitle') }}
+					</RouterLink>
 				</div>
-			</div>
-		</header>
+			</header>
 
-		<BackButton v-if="route.path !== '/'" />
+			<BackButton v-if="route.path !== '/'" />
 
-		<RouterView />
+			<RouterView />
+		</div>
 	</div>
 </template>
+
+<style scoped>
+.user-chip {
+	max-width: 10rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.8rem;
+	color: var(--muted);
+}
+
+.auth-link {
+	font-size: 0.82rem;
+	color: var(--accent);
+	text-decoration: none;
+	background: none;
+	border: none;
+	padding: 0.2rem 0.4rem;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.auth-link:hover {
+	text-decoration: underline;
+}
+</style>
