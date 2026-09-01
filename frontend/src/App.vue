@@ -7,18 +7,12 @@ import ThemeSelector from './components/ThemeSelector.vue'
 import LanguageSelector from './components/LanguageSelector.vue'
 import BackButton from './components/BackButton.vue'
 import { useAuth } from './composables/useAuth'
+import { useTheme } from './composables/useTheme'
+import { saveToStorage } from './utils/storage'
 
 const route = useRoute()
 const router = useRouter()
-const theme = ref(
-	(() => {
-		try {
-			return localStorage.getItem('wilderness-theme') || 'minimal'
-		} catch {
-			return 'minimal'
-		}
-	})()
-)
+const { theme } = useTheme()
 const { locale, t } = useI18n()
 const { user, isLoggedIn, logout } = useAuth()
 
@@ -62,20 +56,8 @@ function updateTitle() {
 }
 
 watch(locale, (value) => {
-	try {
-		localStorage.setItem('wilderness-locale', value)
-	} catch {
-		/* 存储不可用时仅内存态 */
-	}
+	saveToStorage('wilderness-locale', value)
 	updateTitle()
-})
-
-watch(theme, (value) => {
-	try {
-		localStorage.setItem('wilderness-theme', value)
-	} catch {
-		/* 存储不可用时仅内存态 */
-	}
 })
 
 watch(() => route.path, updateTitle, { immediate: true })

@@ -111,6 +111,9 @@ export default {
 	theme: {
 		switcher: '主题切换'
 	},
+	accessibility: {
+		languageSwitcher: '语言切换'
+	},
 	offline: {
 		notice: '离线模式：后端未连接，显示本地缓存内容。'
 	},

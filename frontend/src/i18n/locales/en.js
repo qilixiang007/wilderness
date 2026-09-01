@@ -111,6 +111,9 @@ export default {
 	theme: {
 		switcher: 'Theme switcher'
 	},
+	accessibility: {
+		languageSwitcher: 'Language switcher'
+	},
 	offline: {
 		notice: 'Offline mode: backend unreachable, showing local content.'
 	},
