@@ -102,6 +102,13 @@ export const api = {
 			body: JSON.stringify({ question, webSearchEnabled: webEnabled })
 		}),
 	explain: (slug) => request(`/api/ai/explain/${encodeURIComponent(slug)}`),
+	// 天体生成 Agent：描述 → 检索真实天体作参考 → 生成虚拟天体的介绍与渲染参数
+	generateCelestial: (description) =>
+		request('/api/ai/generate-celestial', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ description })
+		}),
 	uploadKnowledge: (file) => {
 		const form = new FormData()
 		form.append('file', file)

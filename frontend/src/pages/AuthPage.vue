@@ -115,14 +115,46 @@ const isCodeMode = computed(() => mode.value === 'login' && loginMethod.value ==
 
 <template>
 	<main>
-		<section class="section-block auth-section">
-			<div class="section-heading">
-				<p class="eyebrow">{{ $t('auth.kicker') }}</p>
-				<h3>{{ mode === 'login' ? $t('auth.loginTitle') : $t('auth.registerTitle') }}</h3>
-				<p>{{ $t('auth.intro') }}</p>
+		<section class="auth-page">
+			<!-- 左栏：品牌欢迎区 —— 让登录成为完整的独立页面，而不是内容区中央一张孤立的卡片 -->
+			<div class="auth-intro">
+				<svg class="auth-orbits" viewBox="0 0 320 200" role="img" aria-hidden="true">
+					<g fill="var(--star)" opacity="0.7">
+						<circle cx="24" cy="30" r="1.4" />
+						<circle cx="70" cy="14" r="1" />
+						<circle cx="120" cy="42" r="1.2" />
+						<circle cx="200" cy="20" r="1" />
+						<circle cx="250" cy="52" r="1.4" />
+						<circle cx="296" cy="28" r="1" />
+						<circle cx="40" cy="152" r="1" />
+						<circle cx="180" cy="172" r="1.3" />
+						<circle cx="288" cy="160" r="1" />
+					</g>
+					<ellipse cx="160" cy="100" rx="122" ry="42" fill="none" stroke="var(--line)" stroke-width="1.2" opacity="0.5" />
+					<ellipse cx="160" cy="100" rx="78" ry="27" fill="none" stroke="var(--line)" stroke-width="1.2" opacity="0.7" />
+					<circle cx="160" cy="100" r="30" fill="var(--accent)" opacity="0.85" />
+					<circle cx="160" cy="100" r="30" fill="none" stroke="var(--accent-strong)" stroke-width="1.5" />
+					<circle cx="282" cy="100" r="6" fill="var(--accent)" />
+					<circle cx="82" cy="100" r="4" fill="var(--star)" />
+				</svg>
+
+				<div class="auth-intro-copy">
+					<p class="eyebrow">{{ $t('auth.kicker') }}</p>
+					<h2>{{ $t('site.title') }}</h2>
+					<p class="auth-tagline">{{ $t('auth.intro') }}</p>
+				</div>
+
+				<ul class="auth-perks">
+					<li v-for="perk in $t('auth.perks')" :key="perk">{{ perk }}</li>
+				</ul>
+
+				<div class="auth-intro-foot">
+					<RouterLink class="secondary-button" to="/">{{ $t('auth.browseFirst') }}</RouterLink>
+				</div>
 			</div>
 
-			<div class="auth-card">
+			<!-- 右栏：登录 / 注册表单卡片 -->
+			<div class="auth-panel">
 				<div class="auth-tabs">
 					<button
 						class="auth-tab"
@@ -209,16 +241,88 @@ const isCodeMode = computed(() => mode.value === 'login' && loginMethod.value ==
 </template>
 
 <style scoped>
-.auth-section {
-	max-width: 30rem;
-	margin: 0 auto;
+/* 独立整页布局：双栏，铺满内容区，不再是一张居中的小卡片 */
+.auth-page {
+	display: grid;
+	grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+	gap: 28px;
+	align-items: stretch;
+	margin-top: 24px;
 }
 
-.auth-card {
-	background: var(--card);
+/* 左栏：品牌欢迎区 */
+.auth-intro {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: 24px;
+	padding: 34px 34px 28px;
+	border-radius: 28px;
 	border: 1px solid var(--card-border);
-	border-radius: 14px;
-	padding: 1.4rem 1.5rem 1.6rem;
+	background:
+		radial-gradient(circle at 20% 12%, var(--panel-glow), transparent 46%),
+		linear-gradient(180deg, var(--bg-soft), var(--bg));
+	overflow: hidden;
+}
+
+.auth-orbits {
+	width: 100%;
+	height: auto;
+	max-height: 180px;
+	margin-bottom: auto;
+}
+
+.auth-intro h2 {
+	margin: 0 0 10px;
+	font-family: var(--font-display);
+	font-size: clamp(2rem, 4vw, 3rem);
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	line-height: 1.12;
+}
+
+.auth-tagline {
+	margin: 0;
+	max-width: 48ch;
+	color: var(--muted);
+	line-height: 1.8;
+}
+
+.auth-perks {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.auth-perks li {
+	position: relative;
+	padding-left: 22px;
+	line-height: 1.6;
+}
+
+.auth-perks li::before {
+	content: '';
+	position: absolute;
+	left: 2px;
+	top: 0.62em;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--accent);
+}
+
+/* 右栏：表单卡片 */
+.auth-panel {
+	align-self: center;
+	padding: 30px 30px 32px;
+	border-radius: 28px;
+	border: 1px solid var(--card-border);
+	background: var(--card);
+	backdrop-filter: blur(18px);
+	box-shadow: 0 20px 60px var(--shadow);
 }
 
 .auth-tabs {
@@ -364,5 +468,20 @@ const isCodeMode = computed(() => mode.value === 'login' && loginMethod.value ==
 .auth-submit:disabled {
 	opacity: 0.55;
 	cursor: not-allowed;
+}
+
+/* 窄屏：双栏降级为单栏，品牌区在上、表单在下 */
+@media (max-width: 960px) {
+	.auth-page {
+		grid-template-columns: 1fr;
+	}
+
+	.auth-intro {
+		padding: 26px 24px 22px;
+	}
+
+	.auth-orbits {
+		max-height: 140px;
+	}
 }
 </style>

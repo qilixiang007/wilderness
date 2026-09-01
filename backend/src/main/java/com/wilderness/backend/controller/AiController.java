@@ -2,11 +2,15 @@ package com.wilderness.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wilderness.backend.ai.RagService;
+import com.wilderness.backend.ai.agent.CelestialAgentService;
 import com.wilderness.backend.auth.AuthContext;
 import com.wilderness.backend.common.ApiResponse;
 import com.wilderness.backend.dto.ChatRequest;
 import com.wilderness.backend.dto.ChatResponse;
 import com.wilderness.backend.dto.ExplainResponse;
+import com.wilderness.backend.dto.GenerateCelestialRequest;
+import com.wilderness.backend.dto.GenerationResult;
+import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,11 +31,15 @@ import java.util.concurrent.Executors;
 public class AiController {
 
     private final RagService ragService;
+    private final CelestialAgentService celestialAgentService;
     private final ObjectMapper objectMapper;
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    public AiController(RagService ragService, ObjectMapper objectMapper) {
+    public AiController(RagService ragService,
+                        CelestialAgentService celestialAgentService,
+                        ObjectMapper objectMapper) {
         this.ragService = ragService;
+        this.celestialAgentService = celestialAgentService;
         this.objectMapper = objectMapper;
     }
 
@@ -64,6 +72,12 @@ public class AiController {
     @GetMapping("/explain/{slug}")
     public ApiResponse<ExplainResponse> explain(@PathVariable String slug) throws Exception {
         return ApiResponse.ok(ragService.explain(slug, AuthContext.currentUserId()));
+    }
+
+    /** 天体生成 Agent:描述/参数 → 检索真实天体作参考 → 生成虚拟天体的介绍与渲染参数。半公开,未登录可生成。 */
+    @PostMapping("/generate-celestial")
+    public ApiResponse<GenerationResult> generateCelestial(@Valid @RequestBody GenerateCelestialRequest request) throws Exception {
+        return ApiResponse.ok(celestialAgentService.generate(request.description()));
     }
 
     private String toJson(Object o) {

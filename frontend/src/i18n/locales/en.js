@@ -6,6 +6,7 @@ export default {
 	nav: {
 		explore: 'Explore',
 		ask: 'Ask AI',
+		agent: 'Celestial Forge',
 		favorites: 'Favorites',
 		menu: 'Open menu'
 	},
@@ -76,6 +77,37 @@ export default {
 		chars: 'chars',
 		chunks: 'chunks'
 	},
+	agent: {
+		title: 'Celestial Forge',
+		kicker: 'AGENT · GENERATE A CELESTIAL BODY',
+		intro: 'Describe a fictional celestial body (type, mass, color…) and the Agent will retrieve real objects from the knowledge base as scientific reference, then craft its science introduction and image.',
+		typeChips: ['Star', 'Planet', 'Moon', 'Galaxy', 'Nebula', 'Comet'],
+		mass: 'Mass',
+		radius: 'Radius',
+		temperature: 'Surface temp',
+		color: 'Color',
+		naturalDesc: 'Natural language description',
+		descPlaceholder: 'e.g. a dark-red cool red supergiant, 20× the Sun’s mass, ~3000 K surface, named “Ember”',
+		descOrForm: 'Fill the form, write a description, or both — the Agent parses parameters and back-fills the form.',
+		generate: 'Generate celestial body',
+		generating: 'Generating…',
+		generatingHint: 'The Agent is retrieving knowledge and crafting — one moment…',
+		clear: 'Clear',
+		descRequired: 'Describe or fill in the celestial body parameters',
+		backendUnavailable: 'Backend unreachable: AI service is not configured or started.',
+		generateFailed: 'Generation failed. Please retry.',
+		steps: 'Agent trace',
+		parameters: 'Parameters',
+		introduction: 'Science introduction',
+		sources: 'Reference objects',
+		imageHint: 'Procedurally rendered from parameters (upgrades to an AI image when an image API is configured)',
+		trySamples: 'Try describing:',
+		samples: [
+			'A blue-glowing gas giant, 2× the mass of Jupiter, with two pale golden rings',
+			'A dark grey moon riddled with craters, orbiting a purple planet',
+			'A pale purple nebula lit by newborn stars, about 80 light-years across'
+		]
+	},
 	theme: {
 		switcher: 'Theme switcher'
 	},
@@ -104,6 +136,8 @@ export default {
 		kicker: 'ACCOUNT · ISOLATED DATA',
 		title: 'Log in / Sign up',
 		intro: 'Sign up with any email (QQ, 163, Gmail, …). Your favorites and uploaded knowledge files are saved per account.',
+		perks: ['Favorites and uploads isolated per account', 'Your personal knowledge files follow your account', 'AI Q&A and Celestial Forge, ready when you are'],
+		browseFirst: 'Browse the catalog first',
 		loginTitle: 'Log in',
 		registerTitle: 'Sign up',
 		email: 'Email',

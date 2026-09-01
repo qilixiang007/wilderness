@@ -9,7 +9,6 @@ import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.output.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -83,8 +82,8 @@ public class KnowledgeIngestionService {
         log.info("切块完成:{} 篇文档 → {} 个块(chunk-size={}, overlap={})",
                 documents.size(), segments.size(), chunkSize, chunkOverlap);
 
-        Response<List<Embedding>> response = embeddingModel.embedAll(segments);
-        List<Embedding> embeddings = response.content();
+        // qwen 嵌入单次 batch 上限 10，分批后再合并
+        List<Embedding> embeddings = EmbeddingBatchHelper.embedAll(embeddingModel, segments);
         if (embeddings.size() != segments.size()) {
             throw new IllegalStateException("向量数量与切块数量不一致:" + embeddings.size() + " vs " + segments.size());
         }

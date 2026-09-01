@@ -71,6 +71,10 @@ wilderness:
     web:
       max-results: 3
       max-characters: 1500
+    image:
+      # 天体生成 Agent 的文生图升级通道;不配则自动降级为前端 SVG 程序化渲染
+      api-key: ${DASHSCOPE_IMAGE_API_KEY:}
+      model: ${DASHSCOPE_IMAGE_MODEL:wanx2.1-t2i-turbo}
     langsmith:
       endpoint: https://api.smith.langchain.com
       api-key: ${LANGSMITH_API_KEY:}

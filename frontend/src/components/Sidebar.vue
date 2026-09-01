@@ -29,6 +29,9 @@ const emit = defineEmits(['close'])
 			<RouterLink class="sidebar-link" to="/ask" @click="emit('close')">
 				{{ $t('nav.ask') }}
 			</RouterLink>
+			<RouterLink class="sidebar-link" to="/agent" @click="emit('close')">
+				{{ $t('nav.agent') }}
+			</RouterLink>
 		</nav>
 
 		<p class="sidebar-foot">Wilderness of the Universe</p>

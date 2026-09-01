@@ -6,6 +6,7 @@ export default {
 	nav: {
 		explore: '开始探索',
 		ask: 'AI 问答',
+		agent: '天体生成',
 		favorites: '我的收藏',
 		menu: '打开菜单'
 	},
@@ -76,6 +77,37 @@ export default {
 		chars: '字',
 		chunks: '块'
 	},
+	agent: {
+		title: '天体生成',
+		kicker: 'AGENT · 生成虚拟天体',
+		intro: '用类型、质量、颜色等参数描述一个你想要的虚构天体。Agent 会检索站内真实天体资料作科学参考，生成它的介绍与图像。',
+		typeChips: ['恒星', '行星', '卫星', '星系', '星云', '彗星与小天体'],
+		mass: '质量',
+		radius: '半径',
+		temperature: '表面温度',
+		color: '颜色',
+		naturalDesc: '自然语言描述',
+		descPlaceholder: '例如：一颗暗红色、质量是太阳 20 倍、表面温度约 3000K 的冷红巨星，名叫「赤焰」',
+		descOrForm: '可只填表单、只写描述，或两者结合——Agent 会自动解析参数并回填表单。',
+		generate: '生成天体',
+		generating: '生成中…',
+		generatingHint: 'Agent 正在检索知识库并创作，请稍候…',
+		clear: '清空',
+		descRequired: '请描述或填写天体的参数',
+		backendUnavailable: '后端不可用：AI 服务未配置或未启动，请稍后再试。',
+		generateFailed: '生成失败，请重试。',
+		steps: 'Agent 执行轨迹',
+		parameters: '参数卡片',
+		introduction: '科学介绍',
+		sources: '参考的真实天体',
+		imageHint: '图片由参数化渲染生成（配置文生图后升级为 AI 生成图）',
+		trySamples: '试试这样描述：',
+		samples: [
+			'一个散发蓝色光芒的气态巨行星，质量是木星的 2 倍，有两圈淡金色的行星环',
+			'一颗表面遍布环形山的暗灰色卫星，绕一颗紫色行星运行',
+			'一座被新恒星点亮的淡紫色星云，直径约 80 光年'
+		]
+	},
 	theme: {
 		switcher: '主题切换'
 	},
@@ -104,6 +136,8 @@ export default {
 		kicker: '账号 · 数据隔离',
 		title: '登录 / 注册',
 		intro: '用任意邮箱（QQ / 163 / 谷歌等）注册登录。收藏与上传的知识库文件按账号保存，互不可见。',
+		perks: ['收藏与上传的数据按账号隔离', '个人知识库文件随账号保存', 'AI 问答与天体生成随时可用'],
+		browseFirst: '先逛逛星表',
 		loginTitle: '登录',
 		registerTitle: '注册',
 		email: '邮箱',

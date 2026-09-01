@@ -10,7 +10,6 @@ import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.output.Response;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
@@ -82,8 +81,9 @@ public class KnowledgeUploadService {
             throw new IllegalArgumentException("切块结果为空,无法入库");
         }
 
-        Response<List<Embedding>> response = embeddingModel.embedAll(segments);
-        int written = ingestionService.ingestSegments(segments, response.content(), userId);
+        // qwen 嵌入单次 batch 上限 10，分批后再合并
+        List<Embedding> embeddings = EmbeddingBatchHelper.embedAll(embeddingModel, segments);
+        int written = ingestionService.ingestSegments(segments, embeddings, userId);
         upsertDocument(userId, fileName, text.length(), written);
         return new UploadResult(fileName, extracted.type(), text.length(), written, Instant.now().toEpochMilli());
     }
