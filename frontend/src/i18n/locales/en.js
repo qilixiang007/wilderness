@@ -125,6 +125,7 @@ export default {
 		failed: 'Search failed. Please retry.'
 	},
 	favorites: {
+		kicker: 'COLLECTION',
 		title: 'Favorites',
 		add: '☆ Favorite',
 		remove: '★ Favorited',

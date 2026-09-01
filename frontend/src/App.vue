@@ -4,12 +4,21 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Sidebar from './components/Sidebar.vue'
 import ThemeSelector from './components/ThemeSelector.vue'
+import LanguageSelector from './components/LanguageSelector.vue'
 import BackButton from './components/BackButton.vue'
 import { useAuth } from './composables/useAuth'
 
 const route = useRoute()
 const router = useRouter()
-const theme = ref('deep-space')
+const theme = ref(
+	(() => {
+		try {
+			return localStorage.getItem('wilderness-theme') || 'minimal'
+		} catch {
+			return 'minimal'
+		}
+	})()
+)
 const { locale, t } = useI18n()
 const { user, isLoggedIn, logout } = useAuth()
 
@@ -25,10 +34,6 @@ async function handleLogout() {
 const sidebarOpen = ref(false)
 // 顶栏全局搜索
 const searchTerm = ref('')
-
-function toggleLanguage() {
-	locale.value = locale.value === 'zh' ? 'en' : 'zh'
-}
 
 // 顶栏搜索：跳转搜索页并带上关键词（SearchPage 支持 ?q= 深链）
 function goSearch() {
@@ -65,6 +70,14 @@ watch(locale, (value) => {
 	updateTitle()
 })
 
+watch(theme, (value) => {
+	try {
+		localStorage.setItem('wilderness-theme', value)
+	} catch {
+		/* 存储不可用时仅内存态 */
+	}
+})
+
 watch(() => route.path, updateTitle, { immediate: true })
 </script>
 
@@ -95,9 +108,7 @@ watch(() => route.path, updateTitle, { immediate: true })
 				</form>
 				<div class="toolbar-group">
 					<ThemeSelector v-model="theme" />
-					<button class="language-toggle" type="button" @click="toggleLanguage">
-						{{ locale === 'zh' ? 'EN' : '中文' }}
-					</button>
+					<LanguageSelector v-model="locale" />
 					<template v-if="isLoggedIn">
 						<span class="user-chip" :title="user.email">{{ user.email }}</span>
 						<button class="auth-link" type="button" @click="handleLogout">

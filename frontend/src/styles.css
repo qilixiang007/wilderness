@@ -260,6 +260,8 @@ button {
 	padding: 14px 18px;
 	border-radius: 20px;
 	margin-bottom: 20px;
+	position: relative;
+	z-index: 100;
 }
 
 .site-title {

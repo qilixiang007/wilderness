@@ -23,7 +23,7 @@ async function onToggle(object) {
 	<main>
 		<section class="section-block">
 			<div class="section-heading">
-				<p class="eyebrow">{{ $t('favorites.title') }}</p>
+				<p class="eyebrow">{{ $t('favorites.kicker') }}</p>
 				<h3>{{ $t('favorites.title') }}</h3>
 			</div>
 

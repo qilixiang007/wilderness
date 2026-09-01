@@ -125,6 +125,7 @@ export default {
 		failed: '搜索失败，请重试。'
 	},
 	favorites: {
+		kicker: '收藏记录',
 		title: '我的收藏',
 		add: '☆ 收藏',
 		remove: '★ 已收藏',
