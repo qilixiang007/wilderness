@@ -110,7 +110,7 @@ watch(() => route.params.slug, load, { immediate: true })
 						<img :src="object.image" :alt="pick(object.zhName, object.enName)" />
 					</div>
 					<p class="detail-category-link">
-						<RouterLink :to="`/detail/${object.category.slug}`">← {{ pick(object.category.zhName, object.category.enName) }}</RouterLink>
+						<RouterLink :to="`/detail/${object.category.slug}`">{{ pick(object.category.zhName, object.category.enName) }}</RouterLink>
 					</p>
 					<div class="object-title-row">
 						<h4>{{ pick(object.zhName, object.enName) }}</h4>
@@ -177,8 +177,17 @@ watch(() => route.params.slug, load, { immediate: true })
 .object-title-row {
 	display: flex;
 	align-items: center;
-	gap: 0.7rem;
+	gap: 0.55rem;
 	flex-wrap: wrap;
+	margin-top: 22px;
+}
+
+/* 覆盖全局 .detail-card h4 的 22px 上下/右侧内边距：
+   顶部留白交给 .object-title-row 的 margin-top，避免 h4 自身纵向 margin
+   把文字往下顶、让右侧收藏按钮看起来偏上、不与文字居中 */
+.object-title-row h4 {
+	margin: 0;
+	padding: 0 0 0 22px;
 }
 
 .favorite-btn {

@@ -17,7 +17,7 @@ export default {
 	common: {
 		loading: '加载中…',
 		retry: '重试',
-		back: '← 返回上一页',
+		back: '返回上一页',
 		viewDetails: '查看详情',
 		sources: '资料来源',
 		loadFailed: '加载失败，请重试。',

@@ -101,13 +101,15 @@ export const api = {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ question, webSearchEnabled: webEnabled })
 		}),
-	explain: (slug) => request(`/api/ai/explain/${encodeURIComponent(slug)}`),
+	// AI 生成类接口耗时远超默认 8s（LLM 检索+成文通常 10~30s），沿用上传文件的 60s 超时，避免被 AbortController 提前掐断
+	explain: (slug) => request(`/api/ai/explain/${encodeURIComponent(slug)}`, { timeout: 60000 }),
 	// 天体生成 Agent：描述 → 检索真实天体作参考 → 生成虚拟天体的介绍与渲染参数
 	generateCelestial: (description) =>
 		request('/api/ai/generate-celestial', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ description })
+			body: JSON.stringify({ description }),
+			timeout: 60000
 		}),
 	uploadKnowledge: (file) => {
 		const form = new FormData()
@@ -175,6 +177,7 @@ export const api = {
 		request(`/api/agents/${id}/generate`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ description })
+			body: JSON.stringify({ description }),
+			timeout: 60000
 		})
 }

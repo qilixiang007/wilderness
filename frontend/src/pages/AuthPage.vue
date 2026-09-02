@@ -144,10 +144,6 @@ const isCodeMode = computed(() => mode.value === 'login' && loginMethod.value ==
 					<p class="auth-tagline">{{ $t('auth.intro') }}</p>
 				</div>
 
-				<ul class="auth-perks">
-					<li v-for="perk in $t('auth.perks')" :key="perk">{{ perk }}</li>
-				</ul>
-
 				<div class="auth-intro-foot">
 					<RouterLink class="secondary-button" to="/">{{ $t('auth.browseFirst') }}</RouterLink>
 				</div>

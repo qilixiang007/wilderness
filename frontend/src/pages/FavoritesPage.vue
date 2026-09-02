@@ -36,10 +36,12 @@ async function onToggle(object) {
 					</div>
 					<div class="object-copy">
 						<h4>{{ pick(object.zhName, object.enName) }}</h4>
-						<RouterLink class="secondary-button" :to="`/object/${object.slug}`">{{ $t('common.viewDetails') }}</RouterLink>
-						<button class="favorite-remove" type="button" @click="onToggle(object)">
-							{{ $t('favorites.remove') }}
-						</button>
+						<div class="object-actions">
+							<RouterLink class="secondary-button" :to="`/object/${object.slug}`">{{ $t('common.viewDetails') }}</RouterLink>
+							<button class="favorite-remove" type="button" @click="onToggle(object)">
+								{{ $t('favorites.remove') }}
+							</button>
+						</div>
 					</div>
 				</article>
 			</div>
@@ -48,8 +50,23 @@ async function onToggle(object) {
 </template>
 
 <style scoped>
-.object-copy .favorite-remove {
-	margin-left: 0.4rem;
+/* 卡片底部操作：查看详情 / 已收藏 复用全局 46px 胶囊按钮规格，
+   并排成等宽的一对，避免两按钮一高一矮 */
+.object-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 12px;
+	font-size: 0.9rem;
+}
+
+.object-actions > * {
+	flex: 1 1 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 46px;
+	padding: 0 18px;
 }
 
 .favorite-remove {
@@ -57,8 +74,6 @@ async function onToggle(object) {
 	border: 1px solid var(--button-border);
 	color: var(--text);
 	border-radius: 999px;
-	padding: 0.3rem 0.85rem;
-	font-size: 0.82rem;
 	cursor: pointer;
 	transition: background 0.2s ease;
 }

@@ -38,27 +38,53 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const safeColor = (v, fallback) =>
 	typeof v === 'string' && /^#([0-9a-fA-F]{3}){1,2}$/.test(v.trim()) ? v : fallback
 
+// 颜色工具：主色缺辅色/点缀色时从主色推导，避免「紫色主体 + 金色默认辅色」的割裂观感
+const validHex = (v) => typeof v === 'string' && /^#([0-9a-fA-F]{3}){1,2}$/.test(v.trim())
+const hexToRgb = (hex) => {
+	const h = hex.trim().replace('#', '')
+	const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+	const n = parseInt(full, 16)
+	return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+const toHex = (n) => Math.round(n).toString(16).padStart(2, '0')
+// 两色加权混合：w=0 返回 a，w=1 返回 b
+const mixHex = (a, b, w) => {
+	const [r1, g1, b1] = hexToRgb(a)
+	const [r2, g2, b2] = hexToRgb(b)
+	const k = 1 - w
+	return `#${toHex(r1 * k + r2 * w)}${toHex(g1 * k + g2 * w)}${toHex(b1 * k + b2 * w)}`
+}
+const shade = (hex, w) => mixHex(hex, '#000000', w)
+const lighten = (hex, w) => mixHex(hex, '#ffffff', w)
+
 // 合并默认值 + clamp + 颜色校验后的有效渲染参数
+// 合并默认值 + clamp 后的有效渲染参数。
+// 颜色单独处理：主色优先，辅/点缀色缺项时从主色推导（避免 render 只给主色/主色被权威覆盖时，
+// 画面混入与主色无关的固定金色）。卫星清洗为 { color, size } 白名单，最多 9 颗。
 const r = computed(() => {
 	const src = props.render || {}
 	const out = {}
 	for (const [k, def] of Object.entries(DEFAULTS)) {
-		if (typeof def === 'number') {
-			const v = typeof src[k] === 'number' ? src[k] : def
-			out[k] = k === 'coreSize' ? clamp(v, 0.2, 0.9)
-				: k === 'ringTilt' ? clamp(v, 0, 75)
-				: k === 'spiralArms' ? Math.round(clamp(v, 2, 6))
-				: k === 'bands' ? Math.round(clamp(v, 0, 14))
-				: k === 'spots' ? Math.round(clamp(v, 0, 12))
-				: clamp(v, 0, 1)
-		} else if (k === 'category') {
-			out[k] = DEFAULTS.category
-		} else {
-			out[k] = safeColor(src[k], def)
-		}
+		if (typeof def !== 'number') continue
+		const v = typeof src[k] === 'number' ? src[k] : def
+		out[k] = k === 'coreSize' ? clamp(v, 0.2, 0.9)
+			: k === 'ringTilt' ? clamp(v, 0, 75)
+			: k === 'spiralArms' ? Math.round(clamp(v, 2, 6))
+			: k === 'bands' ? Math.round(clamp(v, 0, 14))
+			: k === 'spots' ? Math.round(clamp(v, 0, 12))
+			: clamp(v, 0, 1)
 	}
+	out.primaryColor = safeColor(src.primaryColor, DEFAULTS.primaryColor)
+	out.secondaryColor = validHex(src.secondaryColor) ? src.secondaryColor : shade(out.primaryColor, 0.55)
+	out.accentColor = validHex(src.accentColor) ? src.accentColor : lighten(out.primaryColor, 0.5)
 	const category = String(src.category || DEFAULTS.category).toLowerCase()
-	if (CATEGORIES.includes(category)) out.category = category
+	out.category = CATEGORIES.includes(category) ? category : DEFAULTS.category
+	const sats = Array.isArray(src.satellites) ? src.satellites : []
+	out.satellites = sats.slice(0, 9).map((s) => {
+		const color = safeColor(s && s.color, out.accentColor)
+		const size = Number(s && s.size)
+		return { color, size: Number.isFinite(size) ? clamp(size, 0.05, 0.5) : 0.13 }
+	})
 	return out
 })
 
@@ -140,6 +166,26 @@ const cometTail = computed(() => {
 	const x = CX + 26
 	const y = CY - 14
 	return `M${x},${y} L${x - L},${y + L * 0.72 - spread / 2} L${x - L * 0.92},${y + L * 0.72 + spread / 2} Z`
+})
+
+// 环绕卫星布局：等角落在倾斜轨道椭圆上（仅行星/恒星；轨道半径随中心体缩放、不超画布）
+const satelliteOrbit = computed(() => {
+	const sats = r.value.satellites
+	const host = r.value.category === 'planet' || r.value.category === 'star'
+	if (!sats.length || !host) return null
+	const rx = Math.min(coreRadius.value * (r.value.hasRings ? 3.1 : 2.6), 185)
+	const ry = rx * 0.42
+	const tilt = r.value.ringTilt || 20
+	const dots = sats.map((s, i) => {
+		const a = ((i * 360) / sats.length + 15) * (Math.PI / 180)
+		return {
+			color: s.color,
+			x: CX + rx * Math.cos(a),
+			y: CY + ry * Math.sin(a),
+			rad: Math.max(3, coreRadius.value * 0.12 * ((s.size || 0.13) / 0.13))
+		}
+	})
+	return { rx, ry, tilt, dots }
 })
 
 const turbBase = computed(() => (0.012 + r.value.noise * 0.05).toFixed(4))
@@ -256,6 +302,16 @@ const surfaceBase = computed(() => (0.03 + r.value.surfaceTexture * 0.09).toFixe
 			<circle :cx="CX" :cy="CY" :r="coreRadius * 0.6" :fill="r.accentColor" />
 			<circle :cx="CX - coreRadius * 0.18" :cy="CY - coreRadius * 0.2" :r="coreRadius * 0.16"
 				fill="#fff" opacity="0.5" />
+		</g>
+
+		<!-- 环绕卫星：等角落在倾斜轨道上（行星/恒星；卫星贴主天体公转面，画在最上层） -->
+		<g v-if="satelliteOrbit" :transform="`rotate(${satelliteOrbit.tilt} ${CX} ${CY})`">
+			<ellipse :cx="CX" :cy="CY" :rx="satelliteOrbit.rx" :ry="satelliteOrbit.ry"
+				fill="none" :stroke="r.accentColor" stroke-width="1.5" opacity="0.22" stroke-dasharray="3 6" />
+			<g v-for="(m, i) in satelliteOrbit.dots" :key="i">
+				<circle :cx="m.x" :cy="m.y" :r="m.rad" :fill="m.color" />
+				<circle :cx="m.x - m.rad * 0.25" :cy="m.y - m.rad * 0.3" :r="m.rad * 0.4" fill="#fff" opacity="0.35" />
+			</g>
 		</g>
 
 		<!-- 全局尘埃噪点（增强质感） -->

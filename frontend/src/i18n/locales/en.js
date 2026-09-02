@@ -17,7 +17,7 @@ export default {
 	common: {
 		loading: 'Loading…',
 		retry: 'Retry',
-		back: '← Go back',
+		back: 'Go back',
 		viewDetails: 'View details',
 		sources: 'Sources',
 		loadFailed: 'Failed to load. Please retry.',

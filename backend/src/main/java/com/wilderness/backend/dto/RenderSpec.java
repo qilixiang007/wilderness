@@ -1,5 +1,7 @@
 package com.wilderness.backend.dto;
 
+import java.util.List;
+
 /**
  * 前端 SVG 程序化渲染天体的参数（由 LLM 结构化输出产生）。
  *
@@ -7,6 +9,10 @@ package com.wilderness.backend.dto;
  * category 为六类英文枚举，与知识库 type 对应，前端据此选择渲染形态：
  * star / planet / moon / galaxy / nebula / small-bodies。
  * 颜色一律用 #RRGGBB 十六进制。
+ *
+ * 用户显式要求的约束（颜色、N 颗卫星）是硬性约束，须原样落入 render：
+ * 颜色进 primaryColor，每颗卫星在 {@link #satellites()} 里一个对象元素
+ * （对象数组，禁止字符串数组）。
  */
 public record RenderSpec(
         String category,        // star | planet | moon | galaxy | nebula | small-bodies
@@ -26,6 +32,14 @@ public record RenderSpec(
         Double spiralTwist,     // 旋臂缠绕度 0~1
         Double tailLength,      // 彗尾长度 0~1
         Double tailSpread,      // 彗尾散开度 0~1
-        Double glowSpread       // 光晕扩散半径 0~1
+        Double glowSpread,      // 光晕扩散半径 0~1
+        List<RenderSatellite> satellites // 环绕中心天体的卫星；每颗 {color,size}
 ) {
+
+    /**
+     * 一颗环绕中心天体的卫星。color 用 #RRGGBB；size 为相对大小（0~1），
+     * 缺省由前端按中心体半径取默认。LLM 须以对象数组输出，不得输出字符串数组。
+     */
+    public record RenderSatellite(String color, Double size) {
+    }
 }

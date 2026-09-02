@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 import MarkdownView from '../components/MarkdownView.vue'
 import CelestialVisual from '../components/CelestialVisual.vue'
 import SelectDropdown from '../components/SelectDropdown.vue'
+import { repairRender } from '../utils/renderRepair'
 import { api, ApiUnavailableError } from '../api'
 import { useAuth } from '../composables/useAuth'
 
@@ -23,12 +24,16 @@ const temperature = ref('')
 // 马卡龙色系（柔和低饱和），默认第一个，点选圆形色块即用
 const macaronColors = ['#f2a6b8', '#c9b8e8', '#a8d8d0', '#f5e6ca']
 const color = ref(macaronColors[0])
+// 是否主动点过色板：点过才把该颜色当权威约束注入描述并覆盖画面（默认色不再强行生效）
+const colorTouched = ref(false)
 const description = ref('')
 
 // 状态机
 const status = ref('idle') // idle | generating | ready | error
 const error = ref('')
 const result = ref(null)
+// 视觉用 render：对模型原始 render 做确定性兜底（主色权威 + 卫星解析）后传给 CelestialVisual
+const visualRender = ref(null)
 
 const samples = tm('agent.samples')
 
@@ -149,8 +154,14 @@ function buildDescription() {
 	if (mass.value.trim()) parts.push(`质量${mass.value.trim()}`)
 	if (radius.value.trim()) parts.push(`半径${radius.value.trim()}`)
 	if (temperature.value.trim()) parts.push(`表面温度${temperature.value.trim()}`)
-	if (color.value) parts.push(`颜色${color.value}`)
+	// 只有用户主动点过色板才把颜色写进描述（否则默认色会污染纯打字的请求）
+	if (colorTouched.value && color.value) parts.push(`颜色${color.value}`)
 	return parts.join('，')
+}
+
+function pickColor(c) {
+	color.value = c
+	colorTouched.value = true
 }
 
 function fillSample(text) {
@@ -163,7 +174,9 @@ function clearAll() {
 	radius.value = ''
 	temperature.value = ''
 	color.value = macaronColors[0]
+	colorTouched.value = false
 	description.value = ''
+	visualRender.value = null
 }
 
 async function generate() {
@@ -179,6 +192,12 @@ async function generate() {
 			? await api.generateCelestialWithAgent(selectedAgentId.value, desc)
 			: await api.generateCelestial(desc)
 		result.value = res
+		// 视觉单独走确定性兜底：用户点选的颜色权威覆盖，卫星从描述解析补上
+		visualRender.value = repairRender(res.render, {
+			userColor: colorTouched.value ? color.value : '',
+			desc,
+			paramsText: Object.entries(res.parameters || {}).map(([k, v]) => `${k}${v}`).join(' ')
+		})
 		status.value = 'ready'
 		backfillForm(res)
 	} catch (e) {
@@ -344,7 +363,7 @@ function backfillForm(res) {
 								:disabled="status === 'generating'"
 								:aria-label="c"
 								:title="c"
-								@click="color = c"
+								@click="pickColor(c)"
 							></button>
 						</div>
 					</label>
@@ -398,7 +417,7 @@ function backfillForm(res) {
 					<h4 class="result-title">{{ result.name }}</h4>
 					<div class="visual-panel">
 						<img v-if="result.imageUrl" :src="result.imageUrl" :alt="result.name" class="ai-image" />
-						<CelestialVisual v-else :render="result.render || {}" :name="result.name" />
+						<CelestialVisual v-else :render="visualRender || result.render || {}" :name="result.name" />
 					</div>
 					<p class="visual-caption">
 						{{ $t('agent.imageHint') }}
