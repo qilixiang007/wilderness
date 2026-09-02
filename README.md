@@ -14,9 +14,12 @@
 
 - `frontend/`：Vue 3 前端（含搜索页、收藏页）
 - `backend/`：Spring Boot 3 后端（含 RAG 问答、LangSmith 追踪客户端）
-- `docs/`：开发文档与 7 天计划
+- `docs/`：开发文档、7 天计划与上线部署手册（`docs/deploy-online.md`）
 - `monitoring/`：Prometheus 抓取配置
-- `docker-compose.yml`：MySQL / Redis / Elasticsearch / 后端 / 前端 / Prometheus / Grafana 一键编排
+- `docker-compose.yml`：本地开发编排（MySQL / Redis / Elasticsearch / 后端 / 前端 / Prometheus / Grafana）
+- `docker-compose.prod.yml` + `docker-compose.https.yml`：生产编排（只暴露 Nginx，内网互连 + 可选 HTTPS 叠加层）
+- `deploy/`：生产环境变量模板、HTTPS 站点配置与证书目录
+- `scripts/`：服务器初始化 / 整站备份 / 恢复脚本
 
 ## 架构
 
@@ -96,9 +99,31 @@ docker compose up -d --build
 - 无任何 key 也能全栈启动：AI 问答 404，其余功能正常。
 - 健康检查：`curl http://localhost:8080/api/health` 应返回 `{"success":true,"data":{"status":"UP"...}}`。
 
+### 方式三：生产上线（大陆服务器 + 域名，正式运营）
+
+> ⚠️ 生产**不要**用方式二的 `docker compose up`（那是本地编排，会把 MySQL/ES 等全暴露公网）。
+> 完整步骤（买服务器/域名、备案时序、HTTPS、备份运维、排查表）见 **[docs/deploy-online.md](docs/deploy-online.md)**。
+
+```bash
+# 服务器上（Ubuntu/Debian，root）：
+curl -fsSL https://raw.githubusercontent.com/qilixiang007/wilderness/main/scripts/init-server.sh | bash
+
+cd ~/wilderness
+nano .env                          # 填 MYSQL_ROOT_PASSWORD / MYSQL_PASSWORD / DASHSCOPE_API_KEY / SMTP_*
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 备案通过 + 证书就绪后开 HTTPS（见 deploy/certs/README.md 放证书）：
+docker compose -f docker-compose.prod.yml -f docker-compose.https.yml up -d
+
+# 日常备份（配 cron 见手册 §5.3）
+bash scripts/backup.sh
+```
+
+生产编排要点：只映射 `80`（HTTPS 后加 `443`）；MySQL/Redis/ES/后端仅在 compose 内网互连；Prometheus/Grafana 只绑 `127.0.0.1`；关键凭据走 `.env`（`deploy/env.prod.example` 为模板，`.env` 已 gitignore）；ES 已开快照备份目录供 `scripts/backup.sh` 使用。
+
 ## 环境变量
 
-见 [.env.example](.env.example)。`DASHSCOPE_API_KEY` 必填；`LANGSMITH_API_KEY` 可选（不填则 LangSmith 追踪静默降级）。
+本地开发见 [.env.example](.env.example)；生产部署见 [deploy/env.prod.example](deploy/env.prod.example)。`DASHSCOPE_API_KEY` 必填；`LANGSMITH_API_KEY` 可选（不填则 LangSmith 追踪静默降级）。
 
 ## 接口速览
 

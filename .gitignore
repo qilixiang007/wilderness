@@ -23,3 +23,8 @@ Thumbs.db
 .env.*
 # 但保留 .env.example 作为配置模板提交
 !.env.example
+
+# Production TLS certs（私钥绝不能进仓库；deploy/certs/README.md 有放置说明）
+deploy/certs/*
+!deploy/certs/.gitkeep
+!deploy/certs/README.md

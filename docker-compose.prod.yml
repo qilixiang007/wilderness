@@ -1,0 +1,147 @@
+# ============================================================
+# 「宇宙是旷野」生产编排（正式运营用）
+#
+# 与 docker-compose.yml（本地开发）的区别：
+#   1. 只暴露 80 端口给公网；MySQL/Redis/ES/后端全部只在 compose 内网互连，
+#      Prometheus/Grafana 仅绑定 127.0.0.1（SSH 隧道访问），杜绝公网裸奔。
+#   2. 去掉 RocketMQ（对话记录默认直写 ES 分析索引，无需 broker，省 ~1G 内存）。
+#   3. 关键凭据全部从 .env 读取且必填(:?)，缺失即启动报错，不静默用默认弱口令。
+#   4. ES 增加 path.repo 备份目录，供 scripts/backup.sh 做索引快照。
+#
+# 使用：
+#   cp deploy/env.prod.example .env   # 填入真实值（.env 已 gitignore，不会提交）
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# 上线后再叠加 HTTPS（证书就绪后）：
+#   docker compose -f docker-compose.prod.yml -f docker-compose.https.yml up -d
+# ============================================================
+
+name: wilderness-prod
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: wilderness
+      MYSQL_USER: wilderness
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?请在 .env 设置 MYSQL_PASSWORD（应用账号）}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?请在 .env 设置 MYSQL_ROOT_PASSWORD（务必改掉默认 root）}
+    # 不映射任何宿主机端口：仅内网互连
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.1
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.ml.enabled=false
+      - ingest.geoip.downloader.enabled=false
+      # 备份快照仓库根目录（scripts/backup.sh 依赖此目录）
+      - path.repo=/usr/share/elasticsearch/backups
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS:--Xms512m -Xmx512m}
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+      - es-backups:/usr/share/elasticsearch/backups
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      # 容器内服务名互连（默认 localhost 是容器自身）
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/wilderness?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: wilderness
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:?}
+      SPRING_DATA_REDIS_HOST: redis
+      WILDERNESS_AI_ELASTICSEARCH_HOST: elasticsearch
+      # 对话记录直写 ES 分析索引（生产不启 RocketMQ，无需 mq profile）
+      WILDERNESS_HISTORY_ROCKETMQ_ENABLED: "false"
+      WILDERNESS_HISTORY_INDEX_NAME: wilderness-conversation
+      # —— 密钥/配置全部来自 .env，不写死在镜像里 ——
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-wilderness}
+      DASHSCOPE_IMAGE_API_KEY: ${DASHSCOPE_IMAGE_API_KEY:-}
+      DASHSCOPE_IMAGE_MODEL: ${DASHSCOPE_IMAGE_MODEL:-wanx2.1-t2i-turbo}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      AUTH_SESSION_TTL: ${AUTH_SESSION_TTL:-604800}
+      # 证书就绪并开启 HTTPS 后，把 .env 里 AUTH_COOKIE_SECURE 改为 true 再重启
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+    # 不映射端口：公网流量统一走 frontend(nginx) 反代
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+
+  # 唯一对外开放的入口：nginx 托管 SPA + 反代 /api、/images（SSE 已关缓冲）
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '80:80'
+
+  # —— 可观测（默认不开公网，仅本机 127.0.0.1，SSH 隧道访问）——
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:9090:9090'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?请在 .env 设置 GRAFANA_ADMIN_PASSWORD}
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+volumes:
+  mysql-data:
+  redis-data:
+  es-data:
+  es-backups:
+  grafana-data:
