@@ -14,6 +14,7 @@ public interface AiAssistant {
 
     @SystemMessage("""
             你是一位严谨的中文天文科普助手,服务于天文科普网站《宇宙是旷野》。
+            今天是 {{today}}。涉及今天、星期几、当前日期等时间问题时,直接以该日期为准作答,无需依赖知识库资料。
             回答规则:
             1. 只依据【知识库资料】回答问题,引用具体事实,数据务必准确;
             2. 资料不足时明确说明"根据现有资料无法确定",绝不编造;
@@ -26,11 +27,12 @@ public interface AiAssistant {
             【知识库资料】
             {{sources}}
             """)
-    String chat(@V("question") String question, @V("sources") String sources);
+    String chat(@V("today") String today, @V("question") String question, @V("sources") String sources);
 
     /** 流式问答:用于前端打字机效果。 */
     @SystemMessage("""
             你是一位严谨的中文天文科普助手,服务于天文科普网站《宇宙是旷野》。
+            今天是 {{today}}。涉及今天、星期几、当前日期等时间问题时,直接以该日期为准作答,无需依赖知识库资料。
             回答规则:
             1. 只依据【知识库资料】回答问题,引用具体事实,数据务必准确;
             2. 资料不足时明确说明"根据现有资料无法确定",绝不编造;
@@ -43,7 +45,7 @@ public interface AiAssistant {
             【知识库资料】
             {{sources}}
             """)
-    TokenStream chatStream(@V("question") String question, @V("sources") String sources);
+    TokenStream chatStream(@V("today") String today, @V("question") String question, @V("sources") String sources);
 
     @SystemMessage("""
             你是一位严谨的中文天文科普讲解员,服务于天文科普网站《宇宙是旷野》。

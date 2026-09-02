@@ -1,13 +1,17 @@
 // 英文字典：key 与 zh.js 一一对应。
 export default {
 	site: {
-		title: 'Wilderness of the Universe'
+		title: 'Wilderness of the Universe',
+		kicker: 'ASTRONOMY',
+		slogan: 'Meet the universe here'
 	},
 	nav: {
 		explore: 'Explore',
+		favorites: 'Favorites',
+		knowledge: 'Knowledge Base',
 		ask: 'Ask AI',
 		agent: 'Celestial Forge',
-		favorites: 'Favorites',
+		history: 'History',
 		menu: 'Open menu'
 	},
 	common: {
@@ -31,6 +35,10 @@ export default {
 		stats: '{categories} categories · {objects} objects',
 		statsFallback: '6 categories · 16 objects',
 		observerNotes: "OBSERVER'S NOTES",
+		constellationAria: 'Orion constellation',
+		starBetelgeuse: 'Betelgeuse',
+		starRigel: 'Rigel',
+		starOrionNebula: 'Orion Nebula',
 		whereToStart: 'Where to start',
 		intro: 'From the constellations overhead to galaxies billions of light-years away, get to know the wilderness above. Start by category, or jump straight to an object you are curious about.',
 		fromBackend: 'From backend: {categories} categories · {objects} objects'
@@ -55,27 +63,31 @@ export default {
 		offline: 'Backend unreachable; no offline data for this object.',
 		objects: 'Objects'
 	},
-	ask: {
-		kicker: 'AI ASSISTANT · RAG',
-		title: 'Ask the wilderness',
-		intro: 'Ask about astronomy. Our assistant grounds its answers in the in-house knowledge base via hybrid retrieval, with cited sources.',
+	knowledge: {
+		kicker: 'PERSONAL KNOWLEDGE BASE',
+		title: 'Knowledge Base',
+		intro: 'Upload documents (Word / PDF / Excel / txt) and they are chunked and vectorized into your personal knowledge base for AI Q&A.',
 		uploading: 'Uploading…',
 		uploadFile: 'Upload file',
 		uploaded: 'Ingested "{fileName}" ({chunkCount} chunks)',
 		backendUnavailable: 'Backend unreachable.',
 		uploadFailed: 'Upload failed.',
-		tryAsking: 'Try asking:',
-		suggestions: ['Which is the largest planet in the solar system?', 'Why do stars twinkle?', 'What is dark matter?'],
-		webSearch: 'Web search',
-		placeholder: 'Ask a question about space…',
-		thinking: 'Thinking…',
-		send: 'Send',
-		myFiles: 'My files',
 		noFiles: 'No files uploaded yet',
 		deleteFile: 'Delete',
 		deleteFailed: 'Delete failed.',
 		chars: 'chars',
 		chunks: 'chunks'
+	},
+	ask: {
+		kicker: 'AI ASSISTANT · RAG',
+		title: 'Ask the wilderness',
+		intro: 'Ask about astronomy. Our assistant grounds its answers in the in-house knowledge base via hybrid retrieval, with cited sources.',
+		tryAsking: 'Try asking:',
+		suggestions: ['Which is the largest planet in the solar system?', 'Why do stars twinkle?', 'What is dark matter?'],
+		webSearch: 'Web search',
+		placeholder: 'Ask a question about space…',
+		thinking: 'Thinking…',
+		send: 'Send'
 	},
 	agent: {
 		title: 'Celestial Forge',
@@ -108,6 +120,32 @@ export default {
 			'A pale purple nebula lit by newborn stars, about 80 light-years across'
 		]
 	},
+	agents: {
+		myAgents: 'My agents',
+		select: 'Agent for this run',
+		defaultAgent: 'Built-in agent',
+		builtinHint: 'Built-in: knowledge retrieval + image gen on',
+		create: 'Create agent',
+		edit: 'Edit',
+		delete: 'Delete',
+		deleteConfirm: 'Delete this agent? This cannot be undone.',
+		name: 'Name',
+		namePlaceholder: 'Give your agent a name (e.g. Violet Nebula Forger)',
+		persona: 'Persona prompt',
+		personaPlaceholder: 'Set a persona, e.g. you favor violet-toned nebulae and write with poetic flair…',
+		knowledgeSearch: 'Knowledge retrieval',
+		imageGen: 'Image gen',
+		save: 'Save',
+		cancel: 'Cancel',
+		nameRequired: 'Enter an agent name',
+		personaRequired: 'Enter a persona prompt',
+		createFailed: 'Create failed. Please retry.',
+		saveFailed: 'Save failed. Please retry.',
+		deleteFailed: 'Delete failed. Please retry.',
+		loadFailed: 'Failed to load agents',
+		backendUnavailable: 'Backend unreachable: AI service is not configured or started.',
+		empty: 'No custom agents yet — click “Create agent” to get started.'
+	},
 	theme: {
 		switcher: 'Theme switcher'
 	},
@@ -136,8 +174,24 @@ export default {
 		needLogin: 'Log in to see your favorites',
 		offline: 'Backend unreachable; favorites unavailable.'
 	},
+	history: {
+		kicker: 'CONVERSATION HISTORY',
+		title: 'History',
+		intro: 'Every AI conversation is persisted (MySQL + async ES index) and archived here by day, with search and delete.',
+		searchPlaceholder: 'Search by question…',
+		search: 'Search',
+		empty: 'No conversations yet. Go ask the AI assistant.',
+		offline: 'Backend unreachable; history unavailable.',
+		loadFailed: 'Failed to load. Please retry.',
+		loadMore: 'Load more',
+		delete: 'Delete',
+		deleteFailed: 'Delete failed.',
+		webSearch: 'web',
+		groupToday: 'Today',
+		groupYesterday: 'Yesterday'
+	},
 	auth: {
-		kicker: 'ACCOUNT · ISOLATED DATA',
+		kicker: 'WELCOME TO THE WILDERNESS',
 		title: 'Log in / Sign up',
 		intro: 'Sign up with any email (QQ, 163, Gmail, …). Your favorites and uploaded knowledge files are saved per account.',
 		perks: ['Favorites and uploads isolated per account', 'Your personal knowledge files follow your account', 'AI Q&A and Celestial Forge, ready when you are'],

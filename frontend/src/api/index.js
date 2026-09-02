@@ -147,5 +147,34 @@ export const api = {
 	removeFavorite: (slug) => request(`/api/favorites/${encodeURIComponent(slug)}`, { method: 'DELETE' }),
 	// —— 个人知识库文件 ——
 	getKnowledgeFiles: () => request('/api/knowledge/files'),
-	deleteKnowledgeFile: (id) => request(`/api/knowledge/files/${id}`, { method: 'DELETE' })
+	deleteKnowledgeFile: (id) => request(`/api/knowledge/files/${id}`, { method: 'DELETE' }),
+	// —— 对话历史（仅当前用户）——
+	getHistory: (page = 0, size = 20, q = '') => {
+		const params = new URLSearchParams({ page, size })
+		if (q) params.set('q', q)
+		return request(`/api/history?${params.toString()}`)
+	},
+	deleteHistory: (id) => request(`/api/history/${id}`, { method: 'DELETE' }),
+	// —— 自定义智能体（按用户隔离）——
+	getAgents: () => request('/api/agents'),
+	createAgent: (payload) =>
+		request('/api/agents', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
+		}),
+	updateAgent: (id, payload) =>
+		request(`/api/agents/${id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
+		}),
+	deleteAgent: (id) => request(`/api/agents/${id}`, { method: 'DELETE' }),
+	// 使用某个自定义智能体生成天体（人设 + 工具开关生效）
+	generateCelestialWithAgent: (id, description) =>
+		request(`/api/agents/${id}/generate`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ description })
+		})
 }

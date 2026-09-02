@@ -15,7 +15,7 @@ const emit = defineEmits(['close'])
 
 	<aside class="sidebar" :class="{ 'sidebar-open': open }">
 		<div class="sidebar-brand">
-			<p class="eyebrow">Astronomy / 科普</p>
+			<p class="eyebrow">{{ $t('site.kicker') }}</p>
 			<h1 class="site-title">{{ $t('site.title') }}</h1>
 		</div>
 
@@ -26,14 +26,20 @@ const emit = defineEmits(['close'])
 			<RouterLink class="sidebar-link" to="/favorites" @click="emit('close')">
 				{{ $t('nav.favorites') }}
 			</RouterLink>
+			<RouterLink class="sidebar-link" to="/knowledge" @click="emit('close')">
+				{{ $t('nav.knowledge') }}
+			</RouterLink>
 			<RouterLink class="sidebar-link" to="/ask" @click="emit('close')">
 				{{ $t('nav.ask') }}
 			</RouterLink>
 			<RouterLink class="sidebar-link" to="/agent" @click="emit('close')">
 				{{ $t('nav.agent') }}
 			</RouterLink>
+			<RouterLink class="sidebar-link" to="/history" @click="emit('close')">
+				{{ $t('nav.history') }}
+			</RouterLink>
 		</nav>
 
-		<p class="sidebar-foot">Wilderness of the Universe</p>
+		<p class="sidebar-foot">{{ $t('site.slogan') }}</p>
 	</aside>
 </template>

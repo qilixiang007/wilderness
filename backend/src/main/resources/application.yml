@@ -79,6 +79,15 @@ wilderness:
       endpoint: https://api.smith.langchain.com
       api-key: ${LANGSMITH_API_KEY:}
       project: ${LANGSMITH_PROJECT:wilderness}
+  history:
+    # 对话历史落库总开关；关闭后不写 MySQL/ES/MQ
+    enabled: ${HISTORY_ENABLED:true}
+    index-name: wilderness-conversation
+    rocketmq:
+      # 需 RocketMQ broker；默认关闭，关闭时对话记录直写 ES 分析索引。
+      # 仅当 rocketmq.name-server 存在（application-mq.yml / mq profile）且此处为 true 时才启用 MQ 链路
+      enabled: ${ROCKETMQ_ENABLED:false}
+      topic: conversation-topic
 
 springdoc:
   api-docs:

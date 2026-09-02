@@ -19,9 +19,11 @@ export function useAuth() {
 
 	/** 登录：method = 'password' | 'code'，成功后保存用户信息。 */
 	async function login(method, payload) {
+		// api.loginPassword/loginCode 签名是 (email, password) / (email, code)，必须展开 payload，
+		// 否则整个对象会被当作 email 发给后端，body 变成 {"email":{...}}，后端反序列化失败返回 400。
 		const me = method === 'password'
-			? await api.loginPassword(payload)
-			: await api.loginCode(payload)
+			? await api.loginPassword(payload.email, payload.password)
+			: await api.loginCode(payload.email, payload.code)
 		user.value = me
 		return me
 	}

@@ -71,6 +71,12 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-wilderness}
       SPRING_DATA_REDIS_HOST: redis
       WILDERNESS_AI_ELASTICSEARCH_HOST: elasticsearch
+      # 对话历史：RocketMQ（需 broker，默认关）；关闭时直写 ES 分析索引
+      # mq profile 加载 application-mq.yml（提供 rocketmq.name-server），配合 ROCKETMQ_ENABLED=true 开启 MQ 链路
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-mq}
+      ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
+      WILDERNESS_HISTORY_ROCKETMQ_ENABLED: ${ROCKETMQ_ENABLED:-false}
+      WILDERNESS_HISTORY_INDEX_NAME: wilderness-conversation
       # 密钥从宿主机 .env 透传,不写死在镜像里
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
@@ -99,6 +105,31 @@ services:
         condition: service_healthy
     ports:
       - '80:80'
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.1
+    container_name: wilderness-rocketmq-namesrv
+    restart: unless-stopped
+    command: sh mqnamesrv
+    ports:
+      - '9876:9876'
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.1
+    container_name: wilderness-rocketmq-broker
+    restart: unless-stopped
+    depends_on:
+      - rocketmq-namesrv
+    environment:
+      - NAMESRV_ADDR=rocketmq-namesrv:9876
+      - AUTO_CREATE_TOPIC_ENABLE=true
+    volumes:
+      - ./deploy/rocketmq/broker.conf:/home/rocketmq/rocketmq-5.3.1/conf/broker.conf:ro
+    command: sh mqbroker -c /home/rocketmq/rocketmq-5.3.1/conf/broker.conf
+    ports:
+      - '10911:10911'
+      - '10909:10909'
+      - '10912:10912'
 
   prometheus:
     image: prom/prometheus:v2.54.0

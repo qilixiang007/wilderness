@@ -1,0 +1,10 @@
+# RocketMQ 专用 profile（-Dspring.profiles.active=mq 或 compose 的 SPRING_PROFILES_ACTIVE=mq 激活）。
+# 基础配置不含任何 rocketmq.* 属性，因此 RocketMQAutoConfiguration 整体跳过——无 broker 也能启动。
+# 仅本 profile 激活后 name-server 才存在，producer/consumer 链路（再配合 wilderness.history.rocketmq.enabled=true）才可用。
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}
+  producer:
+    group: ${ROCKETMQ_PRODUCER_GROUP:wilderness-conversation-producer}
+    send-message-timeout: 3000
+  consumer:
+    group: ${ROCKETMQ_CONSUMER_GROUP:wilderness-conversation-consumer}

@@ -2,11 +2,13 @@
 // 天体生成 Agent 页面（独立一级模块）：
 // 类型 chips + 参数表单 + 自然语言描述三者结合输入 → 后端 Agent 检索真实天体作参考 → 生成结果。
 // 结果展示：Agent 执行轨迹 → 天体视觉（文生图或 SVG）→ 参数卡片 → Markdown 介绍 → 参考来源跳转。
-import { ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MarkdownView from '../components/MarkdownView.vue'
 import CelestialVisual from '../components/CelestialVisual.vue'
+import SelectDropdown from '../components/SelectDropdown.vue'
 import { api, ApiUnavailableError } from '../api'
+import { useAuth } from '../composables/useAuth'
 
 const { t, tm } = useI18n()
 
@@ -29,6 +31,116 @@ const error = ref('')
 const result = ref(null)
 
 const samples = tm('agent.samples')
+
+// —— 自定义智能体（登录后可用；未登录走内置路径）——
+const { isLoggedIn, refreshMe } = useAuth()
+const myAgents = ref([])
+const selectedAgentId = ref('') // '' = 内置智能体
+const editing = ref(null) // null | { id }，id 为 null 表示新建
+const agentForm = ref({ name: '', systemPrompt: '', knowledgeSearchEnabled: true, imageGenEnabled: false })
+const saving = ref(false)
+const agentError = ref('')
+
+const agentOptions = computed(() => [
+	{ value: '', label: t('agents.defaultAgent'), sub: t('agents.builtinHint') },
+	...myAgents.value.map((a) => ({
+		value: String(a.id),
+		label: a.name,
+		sub: [
+			a.knowledgeSearchEnabled ? t('agents.knowledgeSearch') : '',
+			a.imageGenEnabled ? t('agents.imageGen') : ''
+		].filter(Boolean).join(' · ')
+	}))
+])
+
+async function loadAgents() {
+	if (!isLoggedIn.value) return
+	try {
+		myAgents.value = await api.getAgents()
+	} catch {
+		myAgents.value = []
+	}
+}
+
+onMounted(async () => {
+	await refreshMe()
+	loadAgents()
+})
+watch(isLoggedIn, (v) => {
+	if (v) loadAgents()
+})
+
+function startCreate() {
+	editing.value = { id: null }
+	agentForm.value = { name: '', systemPrompt: '', knowledgeSearchEnabled: true, imageGenEnabled: false }
+	agentError.value = ''
+}
+
+function startEdit(a) {
+	editing.value = { id: a.id }
+	agentForm.value = {
+		name: a.name,
+		systemPrompt: a.systemPrompt,
+		knowledgeSearchEnabled: a.knowledgeSearchEnabled,
+		imageGenEnabled: a.imageGenEnabled
+	}
+	agentError.value = ''
+}
+
+function cancelEdit() {
+	editing.value = null
+	agentError.value = ''
+}
+
+async function saveAgent() {
+	const name = agentForm.value.name.trim()
+	const persona = agentForm.value.systemPrompt.trim()
+	if (!name) {
+		agentError.value = t('agents.nameRequired')
+		return
+	}
+	if (!persona) {
+		agentError.value = t('agents.personaRequired')
+		return
+	}
+	saving.value = true
+	agentError.value = ''
+	const payload = {
+		name,
+		systemPrompt: persona,
+		knowledgeSearchEnabled: agentForm.value.knowledgeSearchEnabled,
+		imageGenEnabled: agentForm.value.imageGenEnabled
+	}
+	try {
+		if (editing.value.id) {
+			const updated = await api.updateAgent(editing.value.id, payload)
+			const idx = myAgents.value.findIndex((a) => a.id === updated.id)
+			if (idx >= 0) myAgents.value[idx] = updated
+		} else {
+			const created = await api.createAgent(payload)
+			myAgents.value.unshift(created)
+			selectedAgentId.value = String(created.id) // 新建后立即选中
+		}
+		editing.value = null
+	} catch (e) {
+		agentError.value =
+			e instanceof ApiUnavailableError ? t('agents.backendUnavailable') : e.message || t('agents.saveFailed')
+	} finally {
+		saving.value = false
+	}
+}
+
+async function confirmDelete(a) {
+	if (!window.confirm(t('agents.deleteConfirm'))) return
+	try {
+		await api.deleteAgent(a.id)
+		myAgents.value = myAgents.value.filter((x) => x.id !== a.id)
+		if (selectedAgentId.value === String(a.id)) selectedAgentId.value = ''
+	} catch (e) {
+		agentError.value =
+			e instanceof ApiUnavailableError ? t('agents.backendUnavailable') : e.message || t('agents.deleteFailed')
+	}
+}
 
 function buildDescription() {
 	const parts = []
@@ -63,7 +175,9 @@ async function generate() {
 	status.value = 'generating'
 	error.value = ''
 	try {
-		const res = await api.generateCelestial(desc)
+		const res = selectedAgentId.value
+			? await api.generateCelestialWithAgent(selectedAgentId.value, desc)
+			: await api.generateCelestial(desc)
 		result.value = res
 		status.value = 'ready'
 		backfillForm(res)
@@ -91,6 +205,100 @@ function backfillForm(res) {
 				<p class="eyebrow">{{ $t('agent.kicker') }}</p>
 				<h3>{{ $t('agent.title') }}</h3>
 				<p>{{ $t('agent.intro') }}</p>
+			</div>
+
+			<!-- 自定义智能体面板（登录可见）：管理 + 选择生成所用 Agent -->
+			<div v-if="isLoggedIn" class="agents-panel">
+				<div class="agents-head">
+					<h4 class="agents-title">{{ $t('agents.myAgents') }}</h4>
+					<button class="secondary-button" type="button" @click="startCreate">{{ $t('agents.create') }}</button>
+				</div>
+
+				<div class="agent-select-row">
+					<span class="field-label">{{ $t('agents.select') }}</span>
+					<SelectDropdown
+						:model-value="selectedAgentId"
+						:options="agentOptions"
+						:aria-label="$t('agents.select')"
+						@update:model-value="selectedAgentId = $event"
+					>
+						<template #item="{ option }">
+							<span class="opt-label">{{ option.label }}</span>
+							<span v-if="option.sub" class="opt-sub">{{ option.sub }}</span>
+						</template>
+					</SelectDropdown>
+				</div>
+
+				<div v-if="myAgents.length" class="agent-list">
+					<div
+						v-for="a in myAgents"
+						:key="a.id"
+						class="agent-row"
+						:class="{ selected: selectedAgentId === String(a.id) }"
+					>
+						<div class="agent-row-main">
+							<span class="agent-name">{{ a.name }}</span>
+							<span class="agent-toggles">
+								<span class="toggle-badge" :class="{ off: !a.knowledgeSearchEnabled }">
+									{{ $t('agents.knowledgeSearch') }}
+								</span>
+								<span class="toggle-badge" :class="{ off: !a.imageGenEnabled }">
+									{{ $t('agents.imageGen') }}
+								</span>
+							</span>
+						</div>
+						<div class="agent-row-actions">
+							<button class="text-button" type="button" @click="startEdit(a)">{{ $t('agents.edit') }}</button>
+							<button class="text-button danger" type="button" @click="confirmDelete(a)">
+								{{ $t('agents.delete') }}
+							</button>
+						</div>
+					</div>
+				</div>
+				<p v-else-if="!editing" class="field-hint agents-empty">{{ $t('agents.empty') }}</p>
+
+				<!-- 创建 / 编辑表单 -->
+				<form v-if="editing" class="agent-form" @submit.prevent="saveAgent">
+					<label class="field">
+						<span class="field-label">{{ $t('agents.name') }}</span>
+						<input
+							v-model="agentForm.name"
+							type="text"
+							:placeholder="$t('agents.namePlaceholder')"
+							maxlength="50"
+						/>
+					</label>
+					<label class="field">
+						<span class="field-label">{{ $t('agents.persona') }}</span>
+						<textarea
+							v-model="agentForm.systemPrompt"
+							:placeholder="$t('agents.personaPlaceholder')"
+							rows="4"
+							maxlength="4000"
+						></textarea>
+					</label>
+					<div class="form-toggles">
+						<label class="web-toggle" :class="{ checked: agentForm.knowledgeSearchEnabled }">
+							<input v-model="agentForm.knowledgeSearchEnabled" type="checkbox" />
+							<span class="toggle-track"><span class="toggle-thumb"></span></span>
+							<span class="toggle-label">{{ $t('agents.knowledgeSearch') }}</span>
+						</label>
+						<label class="web-toggle" :class="{ checked: agentForm.imageGenEnabled }">
+							<input v-model="agentForm.imageGenEnabled" type="checkbox" />
+							<span class="toggle-track"><span class="toggle-thumb"></span></span>
+							<span class="toggle-label">{{ $t('agents.imageGen') }}</span>
+						</label>
+					</div>
+					<div class="form-actions">
+						<button class="primary-button" type="submit" :disabled="saving">
+							{{ editing.id ? $t('agents.save') : $t('agents.create') }}
+						</button>
+						<button class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">
+							{{ $t('agents.cancel') }}
+						</button>
+					</div>
+					<p v-if="agentError" class="agent-error">{{ agentError }}</p>
+				</form>
 			</div>
 
 			<!-- 输入区 -->
@@ -544,5 +752,203 @@ function backfillForm(res) {
 
 .suggestion-chip:hover {
 	background: var(--panel-glow);
+}
+
+/* —— 自定义智能体面板 —— */
+.agents-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 0.8rem;
+	margin-bottom: 1.6rem;
+	padding: 1.1rem 1.2rem;
+	border-radius: 16px;
+	border: 1px solid var(--card-border);
+	background: var(--card);
+}
+
+.agents-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.6rem;
+}
+
+.agents-title {
+	font-family: var(--font-display);
+	font-size: 1rem;
+	margin: 0;
+}
+
+.agent-select-row {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.agent-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.agent-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.6rem;
+	padding: 0.55rem 0.85rem;
+	border-radius: 12px;
+	border: 1px solid var(--card-border);
+	background: var(--panel-glow);
+}
+
+.agent-row.selected {
+	border-color: var(--accent);
+}
+
+.agent-row-main {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	min-width: 0;
+}
+
+.agent-name {
+	font-weight: 600;
+	font-size: 0.9rem;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.agent-toggles {
+	display: inline-flex;
+	gap: 0.35rem;
+	flex-shrink: 0;
+}
+
+.toggle-badge {
+	font-size: 0.7rem;
+	color: var(--accent);
+	border: 1px solid var(--button-border);
+	border-radius: 999px;
+	padding: 0.1rem 0.5rem;
+	white-space: nowrap;
+}
+
+.toggle-badge.off {
+	color: var(--muted);
+	opacity: 0.7;
+}
+
+.agent-row-actions {
+	display: inline-flex;
+	gap: 0.3rem;
+	flex-shrink: 0;
+}
+
+.text-button {
+	background: none;
+	border: none;
+	color: var(--accent);
+	font: inherit;
+	font-size: 0.82rem;
+	cursor: pointer;
+	padding: 0.25rem 0.45rem;
+	border-radius: 8px;
+}
+
+.text-button:hover {
+	background: var(--panel-glow);
+}
+
+.text-button.danger {
+	color: var(--danger, #e57373);
+}
+
+.agents-empty {
+	margin: 0;
+}
+
+.agent-form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.8rem;
+	padding-top: 0.6rem;
+	border-top: 1px dashed var(--card-border);
+}
+
+.form-toggles {
+	display: flex;
+	gap: 1.2rem;
+	flex-wrap: wrap;
+}
+
+.form-actions {
+	display: flex;
+	gap: 0.6rem;
+}
+
+.opt-label {
+	font-size: 0.88rem;
+}
+
+.opt-sub {
+	font-size: 0.72rem;
+	color: var(--muted);
+}
+
+/* 开关（复用 AskPage 的 web-toggle 胶囊样式） */
+.web-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.web-toggle input {
+	display: none;
+}
+
+.toggle-track {
+	width: 2.1rem;
+	height: 1.15rem;
+	border-radius: 999px;
+	background: var(--button-bg);
+	position: relative;
+	transition: background 0.2s ease;
+}
+
+.toggle-thumb {
+	position: absolute;
+	top: 50%;
+	left: 0.2rem;
+	transform: translateY(-50%);
+	width: 0.75rem;
+	height: 0.75rem;
+	border-radius: 50%;
+	background: var(--muted);
+	transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.web-toggle.checked .toggle-track {
+	background: var(--accent);
+	border-color: var(--accent);
+}
+
+.web-toggle.checked .toggle-thumb {
+	transform: translateY(-50%) translateX(0.95rem);
+	background: #fff;
+}
+
+.toggle-label {
+	font-size: 0.85rem;
+	color: var(--text);
+}
+
+.web-toggle:has(input:disabled) {
+	opacity: 0.6;
+	cursor: not-allowed;
 }
 </style>

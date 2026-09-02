@@ -2,6 +2,7 @@ package com.wilderness.backend.ai;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import com.wilderness.backend.ai.history.ConversationRecorder;
 import com.wilderness.backend.ai.langsmith.LangSmithTracer;
 import com.wilderness.backend.ai.langsmith.RunRef;
 import com.wilderness.backend.dto.AiSource;
@@ -11,9 +12,11 @@ import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.rag.content.Content;
 import dev.langchain4j.rag.query.Query;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,19 +42,22 @@ public class RagService {
     private final WebSearchService webSearchService;
     private final LangSmithTracer tracer;
     private final String indexName;
+    private final ObjectProvider<ConversationRecorder> recorderProvider;
 
     public RagService(HybridContentRetriever retriever,
                       AiAssistant assistant,
                       ElasticsearchClient es,
                       ElasticsearchIndexManager indexManager,
                       WebSearchService webSearchService,
-                      LangSmithTracer tracer) {
+                      LangSmithTracer tracer,
+                      ObjectProvider<ConversationRecorder> recorderProvider) {
         this.retriever = retriever;
         this.assistant = assistant;
         this.es = es;
         this.webSearchService = webSearchService;
         this.tracer = tracer;
         this.indexName = indexManager.indexName();
+        this.recorderProvider = recorderProvider;
     }
 
     public ChatResponse chat(String question, boolean webSearchEnabled, Long userId) throws Exception {
@@ -59,7 +65,8 @@ public class RagService {
         try {
             List<Content> contents = retrieveWithWeb(question, webSearchEnabled, userId);
             List<AiSource> sources = toSources(contents);
-            String answer = assistant.chat(question, formatSources(contents));
+            String answer = assistant.chat(today(), question, formatSources(contents));
+            recordConversation(userId, question, webSearchEnabled, answer, sources);
             ChatResponse response = new ChatResponse(answer, sources);
             Map<String, Object> outputs = new LinkedHashMap<>();
             outputs.put("answer", answer);
@@ -88,14 +95,15 @@ public class RagService {
             List<Content> contents = retrieveWithWeb(question, webSearchEnabled, userId);
             List<AiSource> sources = toSources(contents);
             onSources.accept(sources);
-            assistant.chatStream(question, formatSources(contents))
+            assistant.chatStream(today(), question, formatSources(contents))
                     .onPartialResponse(onDelta::accept)
                     .onCompleteResponse(r -> {
-                        // 流式结束:上报完整回答后,维持原有 onDone 顺序
+                        // 流式结束:落库完整回答后,维持原有 onDone 顺序
                         Map<String, Object> outputs = new LinkedHashMap<>();
                         outputs.put("answer", r.aiMessage().text());
                         outputs.put("sourceCount", sources.size());
                         tracer.finish(run, outputs);
+                        recordConversation(userId, question, webSearchEnabled, r.aiMessage().text(), sources);
                         onDone.run();
                     })
                     .onError(e -> {
@@ -176,6 +184,21 @@ public class RagService {
         }
     }
 
+    /** 今天的日期,注入系统提示词作为时间锚点(时间类问题由此直接作答,不必依赖联网/资料)。 */
+    private String today() {
+        LocalDate now = LocalDate.now();
+        String week = switch (now.getDayOfWeek()) {
+            case MONDAY -> "星期一";
+            case TUESDAY -> "星期二";
+            case WEDNESDAY -> "星期三";
+            case THURSDAY -> "星期四";
+            case FRIDAY -> "星期五";
+            case SATURDAY -> "星期六";
+            case SUNDAY -> "星期日";
+        };
+        return now + " " + week;
+    }
+
     /** 把检索结果拼成给模型的知识库资料文本。 */
     private String formatSources(List<Content> contents) {
         StringBuilder sb = new StringBuilder();
@@ -212,6 +235,21 @@ public class RagService {
 
     private String str(Object o) {
         return o == null ? null : String.valueOf(o);
+    }
+
+    /**
+     * 对话历史落库(尽力而为)。持久化任何失败都不应影响聊天主流程,
+     * 故 recorder 空判 + try/catch 双保险。
+     */
+    private void recordConversation(Long userId, String question, boolean webEnabled, String answer, List<AiSource> sources) {
+        ConversationRecorder recorder = recorderProvider.getIfAvailable();
+        if (recorder != null) {
+            try {
+                recorder.record(userId, question, webEnabled, answer, sources);
+            } catch (Exception ignored) {
+                // recorder 内部已自吞异常,此处兜底确保不打断回答
+            }
+        }
     }
 
     /** 与 {@link HybridContentRetriever} 相同的用户隔离过滤(此处独立实现,避免暴露内部)。 */

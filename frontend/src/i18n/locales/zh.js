@@ -1,13 +1,17 @@
 // 中文字典：所有 UI 文案集中于此，key 与 en.js 一一对应。
 export default {
 	site: {
-		title: '宇宙是旷野'
+		title: '宇宙是旷野',
+		kicker: '天文科普',
+		slogan: '在这里，读懂宇宙'
 	},
 	nav: {
 		explore: '开始探索',
+		favorites: '我的收藏',
+		knowledge: '知识库',
 		ask: 'AI 问答',
 		agent: '天体生成',
-		favorites: '我的收藏',
+		history: '对话历史',
 		menu: '打开菜单'
 	},
 	common: {
@@ -31,6 +35,10 @@ export default {
 		stats: '{categories} 个分类 · {objects} 个天体',
 		statsFallback: '6 个分类 · 16 个天体',
 		observerNotes: '观星导览',
+		constellationAria: '猎户座星图',
+		starBetelgeuse: '参宿四',
+		starRigel: '参宿七',
+		starOrionNebula: '猎户座星云',
 		whereToStart: '从这里出发',
 		intro: '从头顶的星座到亿万光年外的星系，慢慢认识这片旷野。先从分类开始浏览，或直接看看你好奇的天体。',
 		fromBackend: '来自后端：{categories} 个分类 · {objects} 个天体'
@@ -55,27 +63,31 @@ export default {
 		offline: '后端不可用，暂无该天体的离线数据。',
 		objects: '天体列表'
 	},
-	ask: {
-		kicker: 'AI 问答 · 知识库 RAG',
-		title: '向旷野提问',
-		intro: '基于站内天文知识库的 AI 问答。混合检索（关键词 + 语义）定位资料，回答会标注资料来源。',
+	knowledge: {
+		kicker: '个人知识库',
+		title: '知识库',
+		intro: '上传文档（Word/PDF/Excel/txt），系统会自动切块向量化后作为你的个人知识库参与 AI 问答。',
 		uploading: '入库中…',
 		uploadFile: '上传文件到知识库',
 		uploaded: '已入库「{fileName}」，{chunkCount} 个分块',
 		backendUnavailable: '后端不可用，请确认服务已启动。',
 		uploadFailed: '上传失败。',
-		tryAsking: '试试这样问：',
-		suggestions: ['太阳系里最大的行星是哪颗？', '为什么星星会眨眼？', '什么是暗物质？'],
-		webSearch: '联网检索',
-		placeholder: '输入你的天文问题…',
-		thinking: '思考中…',
-		send: '发送',
-		myFiles: '我的文件',
 		noFiles: '还没有上传过文件',
 		deleteFile: '删除',
 		deleteFailed: '删除失败',
 		chars: '字',
 		chunks: '块'
+	},
+	ask: {
+		kicker: 'AI 问答 · 知识库 RAG',
+		title: '向旷野提问',
+		intro: '基于站内天文知识库的 AI 问答。混合检索（关键词 + 语义）定位资料，回答会标注资料来源。',
+		tryAsking: '试试这样问：',
+		suggestions: ['太阳系里最大的行星是哪颗？', '为什么星星会眨眼？', '什么是暗物质？'],
+		webSearch: '联网检索',
+		placeholder: '输入你的天文问题…',
+		thinking: '思考中…',
+		send: '发送'
 	},
 	agent: {
 		title: '天体生成',
@@ -108,6 +120,32 @@ export default {
 			'一座被新恒星点亮的淡紫色星云，直径约 80 光年'
 		]
 	},
+	agents: {
+		myAgents: '我的智能体',
+		select: '本次生成使用',
+		defaultAgent: '内置智能体',
+		builtinHint: '内置：知识库检索 + 文生图全开',
+		create: '创建智能体',
+		edit: '编辑',
+		delete: '删除',
+		deleteConfirm: '确定删除该智能体吗？删除后不可恢复。',
+		name: '名称',
+		namePlaceholder: '给智能体起个名字（如：紫雾星云造物主）',
+		persona: '人设提示词',
+		personaPlaceholder: '设定人设提示词，例如：你偏爱紫色调的星云，创作时措辞富有诗意…',
+		knowledgeSearch: '知识库检索',
+		imageGen: '文生图',
+		save: '保存',
+		cancel: '取消',
+		nameRequired: '请填写智能体名称',
+		personaRequired: '请填写人设提示词',
+		createFailed: '创建失败，请重试。',
+		saveFailed: '保存失败，请重试。',
+		deleteFailed: '删除失败，请重试。',
+		loadFailed: '智能体列表加载失败',
+		backendUnavailable: '后端不可用：AI 服务未配置或未启动，请稍后再试。',
+		empty: '还没有自定义智能体，点击「创建智能体」开始吧。'
+	},
 	theme: {
 		switcher: '主题切换'
 	},
@@ -136,15 +174,32 @@ export default {
 		needLogin: '登录后才能查看收藏',
 		offline: '后端不可用，无法加载收藏'
 	},
+	history: {
+		kicker: '对话记录 · 落库分析',
+		title: '对话历史',
+		intro: '你的每一次 AI 问答都会落库保存（同步 MySQL + 异步入 ES 分析索引），这里按天归档，支持搜索与删除。',
+		searchPlaceholder: '搜索问题关键词…',
+		search: '搜索',
+		empty: '还没有对话记录。去「AI 问答」提问吧。',
+		offline: '后端不可用，无法加载对话历史。',
+		loadFailed: '加载失败，请重试。',
+		loadMore: '加载更多',
+		delete: '删除',
+		deleteFailed: '删除失败',
+		webSearch: '联网',
+		groupToday: '今天',
+		groupYesterday: '昨天'
+	},
 	auth: {
-		kicker: '账号 · 数据隔离',
+		kicker: '欢迎回到旷野',
 		title: '登录 / 注册',
-		intro: '用任意邮箱（QQ / 163 / 谷歌等）注册登录。收藏与上传的知识库文件按账号保存，互不可见。',
-		perks: ['收藏与上传的数据按账号隔离', '个人知识库文件随账号保存', 'AI 问答与天体生成随时可用'],
+		intro: '用任意邮箱（QQ / 163 / 谷歌等）注册或登录，收藏与上传的知识库文件都会为你安全保存。',
+		perks: ['收藏过的天体，随时回来查看', '个人知识库文件，随账号保存', 'AI 问答与天体生成，登录即可用'],
 		browseFirst: '先逛逛星表',
 		loginTitle: '登录',
 		registerTitle: '注册',
 		email: '邮箱',
+		emailPlaceholder: '请输入邮箱地址',
 		password: '密码',
 		passwordHint: '密码至少 6 位',
 		code: '验证码',

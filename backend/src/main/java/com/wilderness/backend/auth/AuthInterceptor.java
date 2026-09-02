@@ -23,6 +23,8 @@ public class AuthInterceptor implements HandlerInterceptor {
 			"/api/favorites/**",
 			"/api/knowledge/upload",
 			"/api/knowledge/files/**",
+			"/api/history/**",
+			"/api/agents/**",
 			"/api/auth/logout",
 			"/api/auth/me"
 	};

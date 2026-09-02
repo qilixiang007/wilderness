@@ -50,7 +50,7 @@ function scrollToCategories() {
 
 		<div class="hero-panel">
 			<!-- 签名元素：猎户座星图（参宿四、参宿七、M42 猎户座星云） -->
-			<svg class="constellation" viewBox="0 0 400 320" role="img" aria-label="Orion constellation">
+			<svg class="constellation" viewBox="0 0 400 320" role="img" :aria-label="$t('home.constellationAria')">
 				<g class="const-lines">
 					<path class="const-line" d="M150 70 L188 132" style="animation-delay: 0s" />
 					<path class="const-line" d="M262 62 L218 148" style="animation-delay: 0s" />
@@ -70,9 +70,9 @@ function scrollToCategories() {
 					<circle class="const-star belt" cx="203" cy="172" r="1.6" style="animation-delay: 0.9s" />
 				</g>
 				<g class="const-labels">
-					<text class="const-label" x="132" y="56" text-anchor="end">参宿四 · Betelgeuse</text>
-					<text class="const-label" x="284" y="252" text-anchor="start">参宿七 · Rigel</text>
-					<text class="const-label accent" x="203" y="198" text-anchor="middle">M42 · 猎户座星云</text>
+					<text class="const-label" x="132" y="56" text-anchor="end">{{ $t('home.starBetelgeuse') }}</text>
+					<text class="const-label" x="284" y="252" text-anchor="start">{{ $t('home.starRigel') }}</text>
+					<text class="const-label accent" x="203" y="198" text-anchor="middle">{{ $t('home.starOrionNebula') }}</text>
 				</g>
 			</svg>
 

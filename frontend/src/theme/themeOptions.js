@@ -6,7 +6,7 @@ export const themeOptions = [
       en: 'Deep Space'
     },
     // 主题代表色：用于下拉菜单的色点标识
-    color: '#e7b96a'
+    color: '#3C4B5D'
   },
   {
     value: 'minimal',
@@ -14,7 +14,7 @@ export const themeOptions = [
       zh: '简约风',
       en: 'Minimal'
     },
-    color: '#a9761f'
+    color: '#e7b96a'
   },
   {
     value: 'macaron',
