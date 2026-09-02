@@ -42,6 +42,13 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+		<!-- devtools: 开发期改动类/资源自动重启（classpath 变化触发），打包/生产不携带 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
 		<!-- 邮件发送：邮箱验证码真实投递（spring.mail.* 配置） -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

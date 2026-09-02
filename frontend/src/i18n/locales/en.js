@@ -199,6 +199,7 @@ export default {
 		loginTitle: 'Log in',
 		registerTitle: 'Sign up',
 		email: 'Email',
+		emailPlaceholder: 'Enter your email address',
 		password: 'Password',
 		passwordHint: 'At least 6 characters',
 		code: 'Code',
