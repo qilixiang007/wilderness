@@ -13,6 +13,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,6 +49,15 @@ public class CelestialObject {
 
 	private int sortOrder;
 
+	/** 数据来源标注（可空：仅权威同步过的对象有值），如 "NASA NSSDCA"、来源页、拉取时间。 */
+	@Column(length = 100)
+	private String dataSource;
+
+	@Column(length = 2048)
+	private String sourceUrl;
+
+	private Instant sourcedAt;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "category_id")
 	private Category category;
@@ -74,6 +84,13 @@ public class CelestialObject {
 	public void addFact(ObjectFact fact) {
 		fact.setObject(this);
 		this.facts.add(fact);
+	}
+
+	/** 权威数据同步落库后调用：写入来源标注与拉取时间。 */
+	public void markSourced(String dataSource, String sourceUrl, Instant sourcedAt) {
+		this.dataSource = dataSource;
+		this.sourceUrl = sourceUrl;
+		this.sourcedAt = sourcedAt;
 	}
 
 	public Long getId() {
@@ -106,6 +123,18 @@ public class CelestialObject {
 
 	public int getSortOrder() {
 		return sortOrder;
+	}
+
+	public String getDataSource() {
+		return dataSource;
+	}
+
+	public String getSourceUrl() {
+		return sourceUrl;
+	}
+
+	public Instant getSourcedAt() {
+		return sourcedAt;
 	}
 
 	public Category getCategory() {

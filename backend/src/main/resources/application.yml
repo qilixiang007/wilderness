@@ -88,6 +88,10 @@ wilderness:
       # 仅当 rocketmq.name-server 存在（application-mq.yml / mq profile）且此处为 true 时才启用 MQ 链路
       enabled: ${ROCKETMQ_ENABLED:false}
       topic: conversation-topic
+  nasa:
+    # 权威数据落地：包内 NASA NSSDCA 快照目录（太阳 + 地球/火星/木星/土星，resources/nasa/fact-sheet-snapshots.json），
+    # 仅在对象无来源标记时应用一次，之后启动跳过。
+    enabled: true
 
 springdoc:
   api-docs:

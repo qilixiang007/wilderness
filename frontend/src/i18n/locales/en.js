@@ -54,6 +54,9 @@ export default {
 	object: {
 		file: 'Object file',
 		keyFacts: 'Key facts',
+		sourceLabel: 'Data source',
+		updatedOn: 'Updated',
+		sourceLink: 'NASA data page',
 		aiExplainer: 'AI explainer',
 		explainPrompt: 'Let AI write a science explainer for this object based on the knowledge base.',
 		generate: 'Generate',

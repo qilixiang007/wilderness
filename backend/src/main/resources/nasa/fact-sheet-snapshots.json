@@ -1,0 +1,58 @@
+{
+  "snapshots": [
+    {
+      "slug": "sun",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/sunfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "695,700 千米", "enValue": "695,700 km" },
+        { "sortOrder": 4, "zhLabel": "表面温度", "enLabel": "Surface temperature", "zhValue": "5,778 K", "enValue": "5,778 K" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "1,988,500 ×10^24 千克", "enValue": "1,988,500 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "1,408 千克/立方米", "enValue": "1,408 kg/m^3" },
+        { "sortOrder": 8, "zhLabel": "表面重力", "enLabel": "Surface gravity", "zhValue": "274.0 米/秒^2", "enValue": "274.0 m/s^2" }
+      ]
+    },
+    {
+      "slug": "earth",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "6,371 千米", "enValue": "6,371 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "5.9722 ×10^24 千克", "enValue": "5.9722 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "5,513 千克/立方米", "enValue": "5,513 kg/m^3" },
+        { "sortOrder": 8, "zhLabel": "表面重力", "enLabel": "Surface gravity", "zhValue": "9.82 米/秒^2", "enValue": "9.82 m/s^2" }
+      ]
+    },
+    {
+      "slug": "mars",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "3,389.5 千米", "enValue": "3,389.5 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "0.64169 ×10^24 千克", "enValue": "0.64169 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "3,934 千克/立方米", "enValue": "3,934 kg/m^3" },
+        { "sortOrder": 8, "zhLabel": "表面重力", "enLabel": "Surface gravity", "zhValue": "3.73 米/秒^2", "enValue": "3.73 m/s^2" }
+      ]
+    },
+    {
+      "slug": "jupiter",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/jupiterfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "69,911 千米", "enValue": "69,911 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "1,898.13 ×10^24 千克", "enValue": "1,898.13 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "1,326 千克/立方米", "enValue": "1,326 kg/m^3" }
+      ]
+    },
+    {
+      "slug": "saturn",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/saturnfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "58,232 千米", "enValue": "58,232 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "568.32 ×10^24 千克", "enValue": "568.32 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "687 千克/立方米", "enValue": "687 kg/m^3" }
+      ]
+    }
+  ]
+}

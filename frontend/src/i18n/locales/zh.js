@@ -54,6 +54,9 @@ export default {
 	object: {
 		file: '天体详情',
 		keyFacts: '关键数据',
+		sourceLabel: '数据来源',
+		updatedOn: '更新于',
+		sourceLink: 'NASA 数据页',
 		aiExplainer: 'AI 讲解',
 		explainPrompt: '让 AI 结合知识库，为你生成一篇关于该天体的科普讲解。',
 		generate: '生成讲解',
