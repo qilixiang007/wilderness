@@ -3,8 +3,10 @@ import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { api, ApiUnavailableError } from '../api'
-import { pick } from '../i18n'
+import ObjectCard from '../components/ObjectCard.vue'
+import { useCompare } from '../composables/useCompare'
 
+const { isSelected } = useCompare()
 const { t } = useI18n()
 const route = useRoute()
 
@@ -75,16 +77,13 @@ watch(
 					{{ $t('search.noResults', { q: q }) }}
 				</p>
 				<div v-else class="card-grid object-card-grid">
-					<article v-for="object in results" :key="object.slug" class="info-card object-card">
-						<div class="object-visual">
-							<img :src="object.image" :alt="pick(object.zhName, object.enName)" />
-						</div>
-						<div class="object-copy">
-							<h4>{{ pick(object.zhName, object.enName) }}</h4>
-							<p>{{ pick(object.zhDescription, object.enDescription) }}</p>
-							<RouterLink class="secondary-button" :to="`/object/${object.slug}`">{{ $t('common.viewDetails') }}</RouterLink>
-						</div>
-					</article>
+					<ObjectCard
+						v-for="object in results"
+						:key="object.slug"
+						:object="object"
+						selectable
+						:selected="isSelected(object.slug)"
+					/>
 				</div>
 			</template>
 		</section>

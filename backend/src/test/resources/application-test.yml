@@ -10,3 +10,8 @@ spring:
     show-sql: false
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+
+# H2 测试上下文不触发外网 NASA 同步
+wilderness:
+  nasa:
+    enabled: false

@@ -67,7 +67,10 @@ public class CelestialObjectService {
 						object.getCategory().getSlug(),
 						object.getCategory().getZhName(),
 						object.getCategory().getEnName()),
-				facts);
+				facts,
+				object.getDataSource(),
+				object.getSourceUrl(),
+				object.getSourcedAt() == null ? null : object.getSourcedAt().toString());
 	}
 
 	@Transactional(readOnly = true)

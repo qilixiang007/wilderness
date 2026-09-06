@@ -54,6 +54,9 @@ export default {
 	object: {
 		file: 'Object file',
 		keyFacts: 'Key facts',
+		sourceLabel: 'Data source',
+		updatedOn: 'Updated',
+		sourceLink: 'NASA data page',
 		aiExplainer: 'AI explainer',
 		explainPrompt: 'Let AI write a science explainer for this object based on the knowledge base.',
 		generate: 'Generate',
@@ -164,6 +167,22 @@ export default {
 		noResults: 'No objects match "{q}".',
 		offline: 'Backend unreachable; search unavailable.',
 		failed: 'Search failed. Please retry.'
+	},
+	compare: {
+		title: 'Compare objects',
+		add: 'Add to compare',
+		remove: 'Remove from compare',
+		selectedCount: '{n}/{max} selected',
+		start: 'Start comparing',
+		clear: 'Clear',
+		tableHeading: 'Parameters at a glance',
+		overviewHeading: 'Comparison summary',
+		explainHeading: 'Individual explainers',
+		loadingOverview: 'AI is writing the comparison summary…',
+		overviewFailed: 'Failed to generate the comparison summary',
+		noFacts: 'No data',
+		empty: 'Select 2~4 objects from the catalog or search results first.',
+		backToPick: 'Go pick objects'
 	},
 	favorites: {
 		kicker: 'COLLECTION',

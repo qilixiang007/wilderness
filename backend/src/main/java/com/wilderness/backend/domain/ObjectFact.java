@@ -52,6 +52,12 @@ public class ObjectFact {
 		this.enValue = enValue;
 	}
 
+	/** 权威数据覆盖时原位改值：label/排序不动，仅更新双语取值。 */
+	public void updateValue(String zhValue, String enValue) {
+		this.zhValue = zhValue;
+		this.enValue = enValue;
+	}
+
 	public Long getId() {
 		return id;
 	}

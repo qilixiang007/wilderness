@@ -8,7 +8,19 @@ import { useFavorites } from '../composables/useFavorites'
 import OfflineNotice from '../components/OfflineNotice.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+// 权威数据来源标注的更新日期：ISO 字符串 → 按当前语言格式化日期
+function formatSourceDate(iso) {
+	if (!iso) return ''
+	const d = new Date(iso)
+	if (Number.isNaN(d.getTime())) return iso
+	return new Intl.DateTimeFormat(locale.value, {
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric'
+	}).format(d)
+}
 
 // AI 讲解:基于知识库生成科普讲解
 const explainStatus = ref('idle') // idle | loading | ready | error
@@ -119,6 +131,21 @@ watch(() => route.params.slug, load, { immediate: true })
 						</button>
 					</div>
 					<p>{{ pick(object.zhDescription, object.enDescription) }}</p>
+
+					<p v-if="object.source" class="object-source">
+						<span>{{ $t('object.sourceLabel') }}：{{ object.source }}</span>
+						<template v-if="object.sourcedAt">
+							<span class="source-sep">·</span>
+							<span>{{ $t('object.updatedOn') }} {{ formatSourceDate(object.sourcedAt) }}</span>
+						</template>
+						<a
+							v-if="object.sourceUrl"
+							class="source-external"
+							:href="object.sourceUrl"
+							target="_blank"
+							rel="noopener"
+						>{{ $t('object.sourceLink') }} ↗</a>
+					</p>
 				</article>
 
 				<div v-if="object.facts && object.facts.length" class="section-heading compact object-heading">
@@ -203,6 +230,31 @@ watch(() => route.params.slug, load, { immediate: true })
 
 .favorite-btn:hover {
 	background: var(--panel-glow);
+}
+
+.object-source {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	margin-top: 0.9rem;
+	font-size: 0.82rem;
+	color: var(--muted);
+}
+
+.source-sep {
+	color: var(--button-border);
+}
+
+.source-external {
+	color: var(--accent);
+	text-decoration: none;
+	border-bottom: 1px dashed currentColor;
+	transition: color 0.2s ease;
+}
+
+.source-external:hover {
+	color: var(--text);
 }
 
 .explain-prompt {

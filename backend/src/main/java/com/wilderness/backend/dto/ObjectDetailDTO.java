@@ -4,6 +4,7 @@ import java.util.List;
 
 /**
  * 天体详情：基本信息 + 所属分类 + 数据卡片。
+ * source/sourceUrl/sourcedAt 可空：仅权威同步过的对象有值（其余对象不填，前端不显示）。
  */
 public record ObjectDetailDTO(
 		String slug,
@@ -14,5 +15,8 @@ public record ObjectDetailDTO(
 		String image,
 		int sortOrder,
 		CategoryRefDTO category,
-		List<FactDTO> facts) {
+		List<FactDTO> facts,
+		String source,
+		String sourceUrl,
+		String sourcedAt) {
 }

@@ -54,6 +54,9 @@ export default {
 	object: {
 		file: '天体详情',
 		keyFacts: '关键数据',
+		sourceLabel: '数据来源',
+		updatedOn: '更新于',
+		sourceLink: 'NASA 数据页',
 		aiExplainer: 'AI 讲解',
 		explainPrompt: '让 AI 结合知识库，为你生成一篇关于该天体的科普讲解。',
 		generate: '生成讲解',
@@ -164,6 +167,22 @@ export default {
 		noResults: '没有找到与「{q}」相关的天体。',
 		offline: '后端不可用，无法搜索。',
 		failed: '搜索失败，请重试。'
+	},
+	compare: {
+		title: '多天体对比',
+		add: '加入对比',
+		remove: '移出对比',
+		selectedCount: '已选 {n}/{max} 个',
+		start: '开始对比',
+		clear: '清空',
+		tableHeading: '参数速览',
+		overviewHeading: '综合对比',
+		explainHeading: '逐篇讲解',
+		loadingOverview: 'AI 正在综合对比，请稍候…',
+		overviewFailed: '综合总结生成失败',
+		noFacts: '暂无数据',
+		empty: '请先在天体列表或搜索结果中勾选 2~4 个天体。',
+		backToPick: '去挑选天体'
 	},
 	favorites: {
 		kicker: '收藏记录',
