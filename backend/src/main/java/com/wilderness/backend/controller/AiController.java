@@ -1,16 +1,20 @@
 package com.wilderness.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wilderness.backend.ai.CompareService;
 import com.wilderness.backend.ai.RagService;
 import com.wilderness.backend.ai.agent.CelestialAgentService;
 import com.wilderness.backend.auth.AuthContext;
 import com.wilderness.backend.common.ApiResponse;
 import com.wilderness.backend.dto.ChatRequest;
 import com.wilderness.backend.dto.ChatResponse;
+import com.wilderness.backend.dto.CompareRequest;
+import com.wilderness.backend.dto.CompareResult;
 import com.wilderness.backend.dto.ExplainResponse;
 import com.wilderness.backend.dto.GenerateCelestialRequest;
 import com.wilderness.backend.dto.GenerationResult;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,8 +26,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -32,15 +36,20 @@ public class AiController {
 
     private final RagService ragService;
     private final CelestialAgentService celestialAgentService;
+    private final CompareService compareService;
     private final ObjectMapper objectMapper;
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final Executor streamExecutor;
 
     public AiController(RagService ragService,
                         CelestialAgentService celestialAgentService,
-                        ObjectMapper objectMapper) {
+                        CompareService compareService,
+                        ObjectMapper objectMapper,
+                        @Qualifier("aiStreamExecutor") Executor streamExecutor) {
         this.ragService = ragService;
         this.celestialAgentService = celestialAgentService;
+        this.compareService = compareService;
         this.objectMapper = objectMapper;
+        this.streamExecutor = streamExecutor;
     }
 
     /** AI 问答:混合检索(+可选联网)+ 生成,返回回答与引文来源。 */
@@ -57,14 +66,18 @@ public class AiController {
         // 关键:检索发生在 executor 线程,ThreadLocal 不跨线程,必须在请求线程先取 userId
         Long userId = AuthContext.currentUserId();
         SseEmitter emitter = new SseEmitter(0L);
-        executor.execute(() -> ragService.streamChat(
-                question,
-                webEnabled,
-                userId,
-                chunk -> safeSend(emitter, "delta", chunk),
-                sources -> safeSend(emitter, "sources", toJson(sources)),
-                emitter::completeWithError,
-                emitter::complete));
+        try {
+            streamExecutor.execute(() -> ragService.streamChat(
+                    question,
+                    webEnabled,
+                    userId,
+                    chunk -> safeSend(emitter, "delta", chunk),
+                    sources -> safeSend(emitter, "sources", toJson(sources)),
+                    emitter::completeWithError,
+                    emitter::complete));
+        } catch (RejectedExecutionException e) {
+            emitter.completeWithError(e);
+        }
         return emitter;
     }
 
@@ -72,6 +85,13 @@ public class AiController {
     @GetMapping("/explain/{slug}")
     public ApiResponse<ExplainResponse> explain(@PathVariable String slug) throws Exception {
         return ApiResponse.ok(ragService.explain(slug, AuthContext.currentUserId()));
+    }
+
+    /** 多天体对比:并行生成各天体讲解(单路失败不影响其他),再综合成一段跨天体对比短文。 */
+    @PostMapping("/compare")
+    public ApiResponse<CompareResult> compare(@Valid @RequestBody CompareRequest request) {
+        Long userId = AuthContext.currentUserId();
+        return ApiResponse.ok(compareService.compare(request.slugs(), userId));
     }
 
     /** 天体生成 Agent:描述/参数 → 检索真实天体作参考 → 生成虚拟天体的介绍与渲染参数。半公开,未登录可生成。 */

@@ -5,6 +5,7 @@ import AskPage from './pages/AskPage.vue'
 import KnowledgePage from './pages/KnowledgePage.vue'
 import AgentPage from './pages/AgentPage.vue'
 import SearchPage from './pages/SearchPage.vue'
+import ComparePage from './pages/ComparePage.vue'
 import FavoritesPage from './pages/FavoritesPage.vue'
 import HistoryPage from './pages/HistoryPage.vue'
 import AuthPage from './pages/AuthPage.vue'
@@ -17,6 +18,7 @@ export default [
 	{ path: '/ask', component: AskPage, meta: { titleKey: 'ask.title' } },
 	{ path: '/agent', component: AgentPage, meta: { titleKey: 'agent.title' } },
 	{ path: '/search', component: SearchPage, meta: { titleKey: 'search.title' } },
+	{ path: '/compare', component: ComparePage, meta: { titleKey: 'compare.title' } },
 	{ path: '/favorites', component: FavoritesPage, meta: { requiresAuth: true, titleKey: 'favorites.title' } },
 	{ path: '/history', component: HistoryPage, meta: { requiresAuth: true, titleKey: 'history.title' } },
 	{ path: '/login', component: AuthPage, meta: { titleKey: 'auth.title' } }

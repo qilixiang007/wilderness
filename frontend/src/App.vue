@@ -1,13 +1,15 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Sidebar from './components/Sidebar.vue'
 import ThemeSelector from './components/ThemeSelector.vue'
 import LanguageSelector from './components/LanguageSelector.vue'
 import BackButton from './components/BackButton.vue'
+import CompareBar from './components/CompareBar.vue'
 import { useAuth } from './composables/useAuth'
 import { useTheme } from './composables/useTheme'
+import { useCompare } from './composables/useCompare'
 import { saveToStorage } from './utils/storage'
 
 const route = useRoute()
@@ -15,6 +17,8 @@ const router = useRouter()
 const { theme } = useTheme()
 const { locale, t } = useI18n()
 const { user, isLoggedIn, logout } = useAuth()
+const { count: compareCount } = useCompare()
+const showCompareBar = computed(() => compareCount.value > 0 && route.path !== '/compare')
 
 // 退出登录：清会话后若在收藏页则回首页
 async function handleLogout() {
@@ -67,7 +71,7 @@ watch(() => route.path, updateTitle, { immediate: true })
 	<div class="page-shell" :data-theme="theme">
 		<Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
 
-		<div class="main-area">
+		<div class="main-area" :class="{ 'has-compare-bar': showCompareBar }">
 			<header class="topbar">
 				<button
 					class="hamburger"
@@ -107,10 +111,16 @@ watch(() => route.path, updateTitle, { immediate: true })
 
 			<RouterView />
 		</div>
+
+		<CompareBar />
 	</div>
 </template>
 
 <style scoped>
+.main-area.has-compare-bar {
+	padding-bottom: 88px;
+}
+
 .user-chip {
 	max-width: 10rem;
 	overflow: hidden;

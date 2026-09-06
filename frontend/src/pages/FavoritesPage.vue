@@ -2,7 +2,7 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFavorites } from '../composables/useFavorites'
-import { pick } from '../i18n'
+import ObjectCard from '../components/ObjectCard.vue'
 
 const router = useRouter()
 const { favorites, toggle, load } = useFavorites()
@@ -30,20 +30,16 @@ async function onToggle(object) {
 			<p v-if="favorites.length === 0" class="detail-missing">{{ $t('favorites.empty') }}</p>
 
 			<div v-else class="card-grid object-card-grid">
-				<article v-for="object in favorites" :key="object.slug" class="info-card object-card">
-					<div class="object-visual">
-						<img :src="object.image" :alt="pick(object.zhName, object.enName)" />
-					</div>
-					<div class="object-copy">
-						<h4>{{ pick(object.zhName, object.enName) }}</h4>
+				<ObjectCard v-for="object in favorites" :key="object.slug" :object="object">
+					<template #actions="{ object: obj }">
 						<div class="object-actions">
-							<RouterLink class="secondary-button" :to="`/object/${object.slug}`">{{ $t('common.viewDetails') }}</RouterLink>
-							<button class="favorite-remove" type="button" @click="onToggle(object)">
+							<RouterLink class="secondary-button" :to="`/object/${obj.slug}`">{{ $t('common.viewDetails') }}</RouterLink>
+							<button class="favorite-remove" type="button" @click="onToggle(obj)">
 								{{ $t('favorites.remove') }}
 							</button>
 						</div>
-					</div>
-				</article>
+					</template>
+				</ObjectCard>
 			</div>
 		</section>
 	</main>

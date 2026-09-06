@@ -14,6 +14,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
+
 /**
  * LLM 模型 Bean。
  * 使用阿里云百炼 DashScope 的 OpenAI 兼容端点,
@@ -33,6 +35,9 @@ public class AiModelConfig {
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .temperature(0.2)
+                // 多天体对比编排层用 orTimeout(60s) 兜底,底层超时须更短,
+                // 否则线程池的线程会被卡住不释放,而不是真正按时归还。
+                .timeout(Duration.ofSeconds(45))
                 .build();
     }
 

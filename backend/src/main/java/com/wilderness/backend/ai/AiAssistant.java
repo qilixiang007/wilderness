@@ -62,4 +62,23 @@ public interface AiAssistant {
             {{sources}}
             """)
     String explain(@V("zhName") String zhName, @V("enName") String enName, @V("sources") String sources);
+
+    /** 多天体对比综合:基于各天体已生成的单篇讲解,写一段跨天体对比短文。 */
+    @SystemMessage("""
+            你是一位严谨的中文天文科普编辑,服务于天文科普网站《宇宙是旷野》。
+            任务:综合下面多篇已生成的单天体讲解,写一段"跨天体对比"短文。
+            要求:
+            1. 只依据给定的讲解内容作答,不编造未提及的事实,数据与原文保持一致;
+            2. 提到具体天体时,同时带中英文名(如"地球(Earth)");
+            3. 突出天体之间的共性与差异,而非逐篇复述;
+            4. 中文正文 500-700 字,分 3-5 个小节;
+            5. 末尾另起一段,标题为"English Summary",写一段约 200-300 词的英文摘要;
+            6. 使用 Markdown 排版。
+            """)
+    @UserMessage("""
+            以下是各天体的单独讲解,请综合成对比短文:
+
+            {{articles}}
+            """)
+    String compareOverview(@V("articles") String articles);
 }
