@@ -13,6 +13,28 @@
       ]
     },
     {
+      "slug": "mercury",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/mercuryfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "2,439.7 千米", "enValue": "2,439.7 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "0.33010 ×10^24 千克", "enValue": "0.33010 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "5,427 千克/立方米", "enValue": "5,427 kg/m^3" },
+        { "sortOrder": 8, "zhLabel": "表面重力", "enLabel": "Surface gravity", "zhValue": "3.70 米/秒^2", "enValue": "3.70 m/s^2" }
+      ]
+    },
+    {
+      "slug": "venus",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/venusfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "6,051.8 千米", "enValue": "6,051.8 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "4.8673 ×10^24 千克", "enValue": "4.8673 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "5,243 千克/立方米", "enValue": "5,243 kg/m^3" },
+        { "sortOrder": 8, "zhLabel": "表面重力", "enLabel": "Surface gravity", "zhValue": "8.87 米/秒^2", "enValue": "8.87 m/s^2" }
+      ]
+    },
+    {
       "slug": "earth",
       "dataSource": "NASA NSSDCA",
       "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html",
@@ -52,6 +74,26 @@
         { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "58,232 千米", "enValue": "58,232 km" },
         { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "568.32 ×10^24 千克", "enValue": "568.32 ×10^24 kg" },
         { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "687 千克/立方米", "enValue": "687 kg/m^3" }
+      ]
+    },
+    {
+      "slug": "uranus",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/uranusfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "25,362 千米", "enValue": "25,362 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "86.813 ×10^24 千克", "enValue": "86.813 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "1,271 千克/立方米", "enValue": "1,271 kg/m^3" }
+      ]
+    },
+    {
+      "slug": "neptune",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/neptunefact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "24,622 千米", "enValue": "24,622 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "102.409 ×10^24 千克", "enValue": "102.409 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "1,638 千克/立方米", "enValue": "1,638 kg/m^3" }
       ]
     },
     {

@@ -93,6 +93,11 @@ public class CelestialObject {
 		this.sourcedAt = sourcedAt;
 	}
 
+	/** 插入新对象需要腾位置时（如行星分类里补种水星/金星）重排已有对象的顺序。 */
+	public void setSortOrder(int sortOrder) {
+		this.sortOrder = sortOrder;
+	}
+
 	public Long getId() {
 		return id;
 	}
