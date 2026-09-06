@@ -34,16 +34,50 @@ public class DataSeeder implements CommandLineRunner {
 	@Override
 	@Transactional
 	public void run(String... args) {
-		if (categoryRepository.count() > 0) {
-			log.info("DataSeeder skipped: categories already present.");
+		if (categoryRepository.count() == 0) {
+			Map<String, Category> categories = seedCategories();
+			seedObjects(categories);
+			log.info("Seeded {} categories, {} celestial objects.",
+					categoryRepository.count(), celestialObjectRepository.count());
 			return;
 		}
 
-		Map<String, Category> categories = seedCategories();
-		seedObjects(categories);
+		backfillMissingPlanets();
+	}
 
-		log.info("Seeded {} categories, {} celestial objects.",
-				categoryRepository.count(), celestialObjectRepository.count());
+	/**
+	 * 库已存在时按 slug 补种缺失的行星（如新增水星/金星/天王星/海王星），
+	 * 不触碰已存在的对象内容，只在插入新行星后把地球/火星/木星/土星的 sortOrder 让位。
+	 */
+	private void backfillMissingPlanets() {
+		Category planet = categoryRepository.findBySlug("planet").orElse(null);
+		if (planet == null) {
+			return;
+		}
+		boolean changed = false;
+		changed |= addIfMissing(mercuryObject(planet));
+		changed |= addIfMissing(venusObject(planet));
+		changed |= addIfMissing(uranusObject(planet));
+		changed |= addIfMissing(neptuneObject(planet));
+		if (changed) {
+			reorderIfPresent("earth", 2);
+			reorderIfPresent("mars", 3);
+			reorderIfPresent("jupiter", 4);
+			reorderIfPresent("saturn", 5);
+			log.info("DataSeeder: backfilled missing planets and reordered existing ones.");
+		}
+	}
+
+	private boolean addIfMissing(CelestialObject object) {
+		if (celestialObjectRepository.findBySlug(object.getSlug()).isPresent()) {
+			return false;
+		}
+		celestialObjectRepository.save(object);
+		return true;
+	}
+
+	private void reorderIfPresent(String slug, int sortOrder) {
+		celestialObjectRepository.findBySlug(slug).ifPresent(o -> o.setSortOrder(sortOrder));
 	}
 
 	// ---- 图片：全部为本地静态资源（backend/src/main/resources/static/images/，经 /images/* 提供），
@@ -52,10 +86,14 @@ public class DataSeeder implements CommandLineRunner {
 	private static final String IMG_STAR = "/images/sun.jpg";
 	private static final String IMG_SIRIUS = "/images/sirius.jpg";
 	private static final String IMG_BETELGEUSE = "/images/betelgeuse.jpg";
+	private static final String IMG_MERCURY = "/images/mercury.jpg";
+	private static final String IMG_VENUS = "/images/venus.jpg";
 	private static final String IMG_PLANET = "/images/earth.jpg";
 	private static final String IMG_MARS = "/images/mars.jpg";
 	private static final String IMG_JUPITER = "/images/jupiter.jpg";
 	private static final String IMG_SATURN = "/images/saturn.jpg";
+	private static final String IMG_URANUS = "/images/uranus.jpg";
+	private static final String IMG_NEPTUNE = "/images/neptune.jpg";
 	private static final String IMG_MOON = "/images/moon.jpg";
 	private static final String IMG_TITAN = "/images/titan.jpg";
 	private static final String IMG_EUROPA = "/images/europa.jpg";
@@ -127,10 +165,13 @@ public class DataSeeder implements CommandLineRunner {
 				fact(3, "半径", "Radius", "约为太阳的 700 倍", "about 700 times the Sun's radius"),
 				fact(4, "位置", "Location", "猎户座肩部", "shoulder of Orion")));
 
+		save(mercuryObject(categories.get("planet")));
+		save(venusObject(categories.get("planet")));
+
 		save(object("earth", "地球", "Earth",
 				"地球是太阳系第三颗行星，也是目前已知唯一存在生命的星球。",
 				"Earth is the third planet from the Sun and the only world known to host life.",
-				IMG_PLANET, 0, categories.get("planet"),
+				IMG_PLANET, 2, categories.get("planet"),
 				fact(1, "类型", "Type", "岩质行星", "Terrestrial planet"),
 				fact(2, "距太阳", "Distance from Sun", "约 1.496 亿千米", "about 149.6 million km"),
 				fact(3, "半径", "Radius", "约 6,371 千米", "about 6,371 km"),
@@ -140,7 +181,7 @@ public class DataSeeder implements CommandLineRunner {
 		save(object("mars", "火星", "Mars",
 				"火星是太阳系第四颗行星，因表面含铁氧化物而呈红色，是人类探测最多的星球之一。",
 				"Mars is the fourth planet from the Sun, red from iron oxide, and one of the most explored worlds.",
-				IMG_MARS, 1, categories.get("planet"),
+				IMG_MARS, 3, categories.get("planet"),
 				fact(1, "类型", "Type", "岩质行星", "Terrestrial planet"),
 				fact(2, "距太阳", "Distance from Sun", "约 2.28 亿千米", "about 228 million km"),
 				fact(3, "半径", "Radius", "约 3,390 千米", "about 3,390 km"),
@@ -150,7 +191,7 @@ public class DataSeeder implements CommandLineRunner {
 		save(object("jupiter", "木星", "Jupiter",
 				"木星是太阳系最大的行星，以其巨大的气态球体和标志性的大红斑著称。",
 				"Jupiter is the largest planet in the Solar System, famous for its Great Red Spot.",
-				IMG_JUPITER, 2, categories.get("planet"),
+				IMG_JUPITER, 4, categories.get("planet"),
 				fact(1, "类型", "Type", "气态巨行星", "Gas giant"),
 				fact(2, "距太阳", "Distance from Sun", "约 7.78 亿千米", "about 778 million km"),
 				fact(3, "半径", "Radius", "约 69,911 千米", "about 69,911 km"),
@@ -160,12 +201,15 @@ public class DataSeeder implements CommandLineRunner {
 		save(object("saturn", "土星", "Saturn",
 				"土星以壮丽的光环闻名，是太阳系中密度最低的行星之一。",
 				"Saturn is renowned for its magnificent rings and is one of the least dense planets.",
-				IMG_SATURN, 3, categories.get("planet"),
+				IMG_SATURN, 5, categories.get("planet"),
 				fact(1, "类型", "Type", "气态巨行星", "Gas giant"),
 				fact(2, "距太阳", "Distance from Sun", "约 14.3 亿千米", "about 1.43 billion km"),
 				fact(3, "半径", "Radius", "约 58,232 千米", "about 58,232 km"),
 				fact(4, "公转周期", "Orbital period", "约 29.5 年", "about 29.5 years"),
 				fact(5, "卫星数量", "Moons", "已知 146 颗", "146 known moons")));
+
+		save(uranusObject(categories.get("planet")));
+		save(neptuneObject(categories.get("planet")));
 
 		save(object("moon", "月球", "The Moon",
 				"月球是地球唯一的天然卫星，也是人类唯一亲身踏足的地外天体。",
@@ -247,6 +291,56 @@ public class DataSeeder implements CommandLineRunner {
 				fact(2, "距太阳", "Distance from Sun", "约 4.14 亿千米", "about 414 million km"),
 				fact(3, "半径", "Radius", "约 476 千米", "about 476 km"),
 				fact(4, "位置", "Location", "小行星带", "main asteroid belt")));
+	}
+
+	// ---- 太阳系行星（按距太阳顺序 sortOrder 0~7；地球/火星/木星/土星见上方 seedObjects） ----
+
+	private CelestialObject mercuryObject(Category planet) {
+		return object("mercury", "水星", "Mercury",
+				"水星是太阳系最内侧、也是最小的行星，昼夜温差极大，几乎没有大气层保温。",
+				"Mercury is the innermost and smallest planet in the Solar System, with almost no atmosphere to retain heat.",
+				IMG_MERCURY, 0, planet,
+				fact(1, "类型", "Type", "岩质行星", "Terrestrial planet"),
+				fact(2, "距太阳", "Distance from Sun", "约 5,790 万千米", "about 57.9 million km"),
+				fact(3, "半径", "Radius", "约 2,440 千米", "about 2,440 km"),
+				fact(4, "公转周期", "Orbital period", "约 88 天", "about 88 days"),
+				fact(5, "卫星数量", "Moons", "0", "0"));
+	}
+
+	private CelestialObject venusObject(Category planet) {
+		return object("venus", "金星", "Venus",
+				"金星大小与地球相近，却被浓厚的二氧化碳大气笼罩，表面温度是太阳系行星中最高的。",
+				"Venus is similar in size to Earth but shrouded in thick carbon dioxide, giving it the hottest surface of any planet.",
+				IMG_VENUS, 1, planet,
+				fact(1, "类型", "Type", "岩质行星", "Terrestrial planet"),
+				fact(2, "距太阳", "Distance from Sun", "约 1.082 亿千米", "about 108.2 million km"),
+				fact(3, "半径", "Radius", "约 6,052 千米", "about 6,052 km"),
+				fact(4, "公转周期", "Orbital period", "约 225 天", "about 225 days"),
+				fact(5, "卫星数量", "Moons", "0", "0"));
+	}
+
+	private CelestialObject uranusObject(Category planet) {
+		return object("uranus", "天王星", "Uranus",
+				"天王星是一颗冰巨星，自转轴几乎倒卧在公转轨道平面上，是太阳系里最“躺平”的行星。",
+				"Uranus is an ice giant whose rotation axis is tilted almost onto its orbital plane, making it spin nearly on its side.",
+				IMG_URANUS, 6, planet,
+				fact(1, "类型", "Type", "冰巨星", "Ice giant"),
+				fact(2, "距太阳", "Distance from Sun", "约 28.7 亿千米", "about 2.87 billion km"),
+				fact(3, "半径", "Radius", "约 25,362 千米", "about 25,362 km"),
+				fact(4, "公转周期", "Orbital period", "约 84 年", "about 84 years"),
+				fact(5, "卫星数量", "Moons", "已知 28 颗", "28 known moons"));
+	}
+
+	private CelestialObject neptuneObject(Category planet) {
+		return object("neptune", "海王星", "Neptune",
+				"海王星是距太阳最远的行星，拥有太阳系中最强烈的风暴系统，风速可超过每秒 600 米。",
+				"Neptune is the farthest planet from the Sun and has the fastest winds in the Solar System, exceeding 600 m/s.",
+				IMG_NEPTUNE, 7, planet,
+				fact(1, "类型", "Type", "冰巨星", "Ice giant"),
+				fact(2, "距太阳", "Distance from Sun", "约 44.95 亿千米", "about 4.495 billion km"),
+				fact(3, "半径", "Radius", "约 24,622 千米", "about 24,622 km"),
+				fact(4, "公转周期", "Orbital period", "约 165 年", "about 165 years"),
+				fact(5, "卫星数量", "Moons", "已知 16 颗", "16 known moons"));
 	}
 
 	// ---- 构造辅助 ----

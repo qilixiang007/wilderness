@@ -40,8 +40,8 @@ class ApiControllerIntegrationTest {
 		mockMvc.perform(get("/api/categories/planet"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.slug").value("planet"))
-				.andExpect(jsonPath("$.data.objects.length()").value(4))
-				.andExpect(jsonPath("$.data.objects[0].slug").value("earth"));
+				.andExpect(jsonPath("$.data.objects.length()").value(8))
+				.andExpect(jsonPath("$.data.objects[0].slug").value("mercury"));
 	}
 
 	@Test
