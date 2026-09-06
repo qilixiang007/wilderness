@@ -4,6 +4,7 @@ import com.wilderness.backend.ai.KnowledgeUploadService;
 import com.wilderness.backend.auth.AuthContext;
 import com.wilderness.backend.common.ApiResponse;
 import com.wilderness.backend.dto.KnowledgeFileDTO;
+import com.wilderness.backend.dto.KnowledgeFilePreviewDTO;
 import com.wilderness.backend.dto.UploadResult;
 import com.wilderness.backend.service.KnowledgeFileService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
@@ -42,6 +43,12 @@ public class KnowledgeController {
     @GetMapping("/files")
     public ApiResponse<List<KnowledgeFileDTO>> files() {
         return ApiResponse.ok(fileService.list(AuthContext.currentUserId()));
+    }
+
+    /** 预览当前用户某个上传文件在知识库中的分块内容(按 chunk_index 顺序)。 */
+    @GetMapping("/files/{id}/preview")
+    public ApiResponse<KnowledgeFilePreviewDTO> preview(@PathVariable Long id) throws Exception {
+        return ApiResponse.ok(fileService.preview(id, AuthContext.currentUserId()));
     }
 
     /** 删除当前用户的某个上传文件(ES 块 + 清单行一起删)。 */

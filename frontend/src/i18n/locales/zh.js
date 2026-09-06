@@ -11,7 +11,7 @@ export default {
 		knowledge: '知识库',
 		ask: 'AI 问答',
 		agent: '天体生成',
-		history: '对话历史',
+		history: '历史',
 		menu: '打开菜单'
 	},
 	common: {
@@ -89,7 +89,15 @@ export default {
 		deleteFile: '删除',
 		deleteFailed: '删除失败',
 		chars: '字',
-		chunks: '块'
+		chunks: '块',
+		previewFile: '预览',
+		previewTitle: '文件预览',
+		previewLoading: '加载中…',
+		previewFailed: '预览加载失败',
+		previewSegment: '第 {index}/{total} 段',
+		previewTruncated: '文件分块较多，仅展示前 {shown} / {total} 段',
+		previewEmpty: '未能加载到分段内容',
+		previewClose: '关闭'
 	},
 	ask: {
 		kicker: 'AI 问答 · 知识库 RAG',
@@ -211,12 +219,18 @@ export default {
 		offline: '后端不可用，无法加载收藏'
 	},
 	history: {
-		kicker: '对话记录 · 落库分析',
-		title: '对话历史',
+		kicker: '历史记录',
+		title: '历史',
+		tabs: {
+			conversation: '对话历史',
+			compare: '对比历史'
+		},
 		intro: '你的每一次 AI 问答都会落库保存（同步 MySQL + 异步入 ES 分析索引），这里按天归档，支持搜索与删除。',
+		compareIntro: '每次多天体对比生成完都会自动保存（MySQL 落库，按账号隔离），这里按天归档，支持删除。',
 		searchPlaceholder: '搜索问题关键词…',
 		search: '搜索',
 		empty: '还没有对话记录。去「AI 问答」提问吧。',
+		compareEmpty: '还没有对比记录。去挑几个天体对比一下吧。',
 		offline: '后端不可用，无法加载对话历史。',
 		loadFailed: '加载失败，请重试。',
 		loadMore: '加载更多',
@@ -237,7 +251,7 @@ export default {
 		email: '邮箱',
 		emailPlaceholder: '请输入邮箱地址',
 		password: '密码',
-		passwordHint: '密码至少 6 位',
+		passwordHint: '至少 8 位，需同时包含英文字母和数字',
 		code: '验证码',
 		codePlaceholder: '6 位数字验证码',
 		sendCode: '发送验证码',
@@ -255,8 +269,27 @@ export default {
 		emailRequired: '请输入邮箱',
 		passwordRequired: '请输入密码',
 		codeRequired: '请输入验证码',
-		passwordTooShort: '密码至少 6 位',
+		passwordTooShort: '密码需为 8-64 位，且必须同时包含英文字母和数字',
 		sendCodeFailed: '验证码发送失败',
-		loginFailed: '登录失败'
+		loginFailed: '登录失败',
+		forgotPassword: '忘记密码？',
+		backToLogin: '返回登录',
+		resetTitle: '重置密码',
+		newPassword: '新密码',
+		newPasswordRequired: '请输入新密码',
+		resetSubmit: '重置密码',
+		resetSuccess: '密码已重置，请使用新密码登录'
+	},
+	account: {
+		kicker: '账号设置',
+		title: '修改密码',
+		oldPassword: '当前密码',
+		newPassword: '新密码',
+		confirmPassword: '确认新密码',
+		oldPasswordRequired: '请输入当前密码',
+		confirmMismatch: '两次输入的新密码不一致',
+		changeSubmit: '修改密码',
+		changeSuccess: '密码已修改',
+		changeFailed: '修改失败，请重试'
 	}
 }

@@ -96,7 +96,7 @@ watch(() => route.path, updateTitle, { immediate: true })
 					<ThemeSelector v-model="theme" />
 					<LanguageSelector v-model="locale" />
 					<template v-if="isLoggedIn">
-						<span class="user-chip" :title="user.email">{{ user.email }}</span>
+						<RouterLink class="user-chip" to="/account" :title="user.email">{{ user.email }}</RouterLink>
 						<button class="auth-link" type="button" @click="handleLogout">
 							{{ $t('auth.logout') }}
 						</button>
@@ -128,6 +128,12 @@ watch(() => route.path, updateTitle, { immediate: true })
 	white-space: nowrap;
 	font-size: 0.8rem;
 	color: var(--muted);
+	text-decoration: none;
+}
+
+.user-chip:hover {
+	color: var(--accent);
+	text-decoration: underline;
 }
 
 .auth-link {

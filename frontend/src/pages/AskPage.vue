@@ -39,8 +39,10 @@ function send() {
 	if (!question || streaming.value) return
 	input.value = ''
 	const userMsg = { role: 'user', content: question }
-	const assistantMsg = { role: 'assistant', content: '', sources: [] }
-	messages.value.push(userMsg, assistantMsg)
+	messages.value.push(userMsg, { role: 'assistant', content: '', sources: [] })
+	// 取数组里那份响应式代理，而不是 push 前的裸对象引用，
+	// 否则后面对它的赋值不会被 Vue 追踪到，界面要等流结束才会一次性刷新。
+	const assistantMsg = messages.value[messages.value.length - 1]
 	streaming.value = true
 	scrollToBottom()
 

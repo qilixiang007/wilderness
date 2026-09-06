@@ -10,15 +10,20 @@ const route = useRoute()
 const router = useRouter()
 const { login, register } = useAuth()
 
-// 模式：登录 / 注册
+// 密码规则：8-64 位，必须同时包含英文字母和数字（与后端 PasswordPolicy 保持一致）
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,64}$/
+
+// 模式：登录 / 注册 / 重置密码
 const mode = ref('login')
 // 登录方式：密码 / 验证码
 const loginMethod = ref('password')
 
 const email = ref('')
 const password = ref('')
+const newPassword = ref('')
 const code = ref('')
 const error = ref('')
+const notice = ref('')
 const submitting = ref(false)
 const codeSent = ref(false)
 // 验证码投递方式：'email'=已发真实邮件；'log'=开发模式,码在服务端日志、未发邮件
@@ -27,9 +32,11 @@ const countdown = ref(0)
 
 let timer = null
 
-// 注册页才需要验证码发送键（登录页走 login purpose，注册页走 register purpose）
+// 验证码用途：注册/登录/重置密码各自独立
 function codePurpose() {
-	return mode.value === 'register' ? 'register' : 'login'
+	if (mode.value === 'register') return 'register'
+	if (mode.value === 'reset') return 'reset'
+	return 'login'
 }
 
 async function sendCode() {
@@ -59,7 +66,11 @@ async function sendCode() {
 function switchMode(next) {
 	mode.value = next
 	error.value = ''
+	notice.value = ''
 	code.value = ''
+	password.value = ''
+	newPassword.value = ''
+	codeSent.value = false
 }
 
 function switchMethod(next) {
@@ -70,6 +81,7 @@ function switchMethod(next) {
 async function submit() {
 	if (submitting.value) return
 	error.value = ''
+	notice.value = ''
 	if (!email.value.trim()) {
 		error.value = t('auth.emailRequired')
 		return
@@ -78,7 +90,7 @@ async function submit() {
 		error.value = t('auth.passwordRequired')
 		return
 	}
-	if ((mode.value === 'register') && (!password.value || password.value.length < 6)) {
+	if (mode.value === 'register' && !PASSWORD_REGEX.test(password.value || '')) {
 		error.value = t('auth.passwordTooShort')
 		return
 	}
@@ -86,11 +98,28 @@ async function submit() {
 		error.value = t('auth.codeRequired')
 		return
 	}
+	if (mode.value === 'reset') {
+		if (!code.value.trim()) {
+			error.value = t('auth.codeRequired')
+			return
+		}
+		if (!PASSWORD_REGEX.test(newPassword.value || '')) {
+			error.value = t('auth.passwordTooShort')
+			return
+		}
+	}
 
 	submitting.value = true
 	try {
 		if (mode.value === 'register') {
 			await register({ email: email.value.trim(), password: password.value, code: code.value.trim() || null })
+		} else if (mode.value === 'reset') {
+			await api.resetPassword(email.value.trim(), code.value.trim(), newPassword.value)
+			// 重置密码不自动登录：回到登录页，让用户用新密码重新登录
+			switchMode('login')
+			loginMethod.value = 'password'
+			notice.value = t('auth.resetSuccess')
+			return
 		} else if (loginMethod.value === 'password') {
 			await login('password', { email: email.value.trim(), password: password.value })
 		} else {
@@ -151,7 +180,7 @@ const isCodeMode = computed(() => mode.value === 'login' && loginMethod.value ==
 
 			<!-- 右栏：登录 / 注册表单卡片 -->
 			<div class="auth-panel">
-				<div class="auth-tabs">
+				<div v-if="mode !== 'reset'" class="auth-tabs">
 					<button
 						class="auth-tab"
 						:class="{ active: mode === 'login' }"
@@ -168,6 +197,12 @@ const isCodeMode = computed(() => mode.value === 'login' && loginMethod.value ==
 					>
 						{{ $t('auth.registerTitle') }}
 					</button>
+				</div>
+				<div v-else class="reset-header">
+					<button type="button" class="back-link" @click="switchMode('login')">
+						← {{ $t('auth.backToLogin') }}
+					</button>
+					<h3>{{ $t('auth.resetTitle') }}</h3>
 				</div>
 
 				<div v-if="mode === 'login'" class="method-tabs">
@@ -195,12 +230,23 @@ const isCodeMode = computed(() => mode.value === 'login' && loginMethod.value ==
 						<input v-model="email" type="email" autocomplete="email" :placeholder="'name@qq.com / @163.com / @gmail.com'" />
 					</label>
 
-					<label v-if="mode === 'register' || loginMethod === 'password'" class="field">
+					<label v-if="mode === 'register' || (mode === 'login' && loginMethod === 'password')" class="field">
 						<span class="field-label">{{ $t('auth.password') }}</span>
 						<input v-model="password" type="password" autocomplete="current-password" :placeholder="$t('auth.passwordHint')" />
 					</label>
 
-					<div v-if="isCodeMode || mode === 'register'" class="field">
+					<div v-if="mode === 'login' && loginMethod === 'password'" class="forgot-row">
+						<button type="button" class="link-button" @click="switchMode('reset')">
+							{{ $t('auth.forgotPassword') }}
+						</button>
+					</div>
+
+					<label v-if="mode === 'reset'" class="field">
+						<span class="field-label">{{ $t('auth.newPassword') }}</span>
+						<input v-model="newPassword" type="password" autocomplete="new-password" :placeholder="$t('auth.passwordHint')" />
+					</label>
+
+					<div v-if="isCodeMode || mode === 'register' || mode === 'reset'" class="field">
 						<span class="field-label">{{ $t('auth.code') }}</span>
 						<div class="code-row">
 							<input v-model="code" type="text" inputmode="numeric" autocomplete="one-time-code" :placeholder="$t('auth.codePlaceholder')" />
@@ -220,6 +266,7 @@ const isCodeMode = computed(() => mode.value === 'login' && loginMethod.value ==
 					</div>
 
 					<p v-if="error" class="auth-error">{{ error }}</p>
+					<p v-if="notice" class="auth-notice">{{ notice }}</p>
 
 					<button class="primary-button auth-submit" type="submit" :disabled="submitting">
 						{{
@@ -227,7 +274,9 @@ const isCodeMode = computed(() => mode.value === 'login' && loginMethod.value ==
 								? $t('auth.submitting')
 								: mode === 'register'
 									? $t('auth.register')
-									: $t('auth.login')
+									: mode === 'reset'
+										? $t('auth.resetSubmit')
+										: $t('auth.login')
 						}}
 					</button>
 				</form>
@@ -343,6 +392,59 @@ const isCodeMode = computed(() => mode.value === 'login' && loginMethod.value ==
 	background: var(--accent);
 	border-color: var(--accent);
 	color: #fff;
+}
+
+.reset-header {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	margin-bottom: 1rem;
+}
+
+.reset-header h3 {
+	margin: 0;
+	font-size: 1.1rem;
+}
+
+.back-link {
+	align-self: flex-start;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--muted);
+	font: inherit;
+	font-size: 0.82rem;
+	cursor: pointer;
+}
+
+.back-link:hover {
+	color: var(--accent);
+}
+
+.forgot-row {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: -0.5rem;
+}
+
+.link-button {
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--accent);
+	font: inherit;
+	font-size: 0.8rem;
+	cursor: pointer;
+}
+
+.link-button:hover {
+	text-decoration: underline;
+}
+
+.auth-notice {
+	color: var(--accent);
+	font-size: 0.85rem;
+	margin: 0;
 }
 
 .method-tabs {

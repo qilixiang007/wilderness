@@ -7,9 +7,11 @@ import com.wilderness.backend.auth.SessionService;
 import com.wilderness.backend.auth.VerifyCodeService;
 import com.wilderness.backend.common.ApiResponse;
 import com.wilderness.backend.config.AuthProperties;
+import com.wilderness.backend.dto.ChangePasswordRequest;
 import com.wilderness.backend.dto.LoginCodeRequest;
 import com.wilderness.backend.dto.LoginPasswordRequest;
 import com.wilderness.backend.dto.RegisterRequest;
+import com.wilderness.backend.dto.ResetPasswordRequest;
 import com.wilderness.backend.dto.UserDTO;
 import com.wilderness.backend.dto.VerifyCodeRequest;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Duration;
 
 /**
- * 认证接口：验证码发送、注册（密码）、密码登录、验证码登录、登出、当前用户。
+ * 认证接口：验证码发送、注册（密码）、密码登录、验证码登录、找回密码、修改密码、登出、当前用户。
  * 注册/登录成功通过 HttpOnly Cookie 写入会话，前端无需存储 token。
  */
 @RestController
@@ -78,6 +80,18 @@ public class AuthController {
 		LoginResult result = authService.loginCode(req.email(), req.code());
 		setSessionCookie(response, result.token());
 		return ApiResponse.ok("登录成功", result.user());
+	}
+
+	@PostMapping("/reset-password")
+	public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+		authService.resetPassword(req.email(), req.code(), req.newPassword());
+		return ApiResponse.ok("密码已重置，请使用新密码登录", null);
+	}
+
+	@PostMapping("/change-password")
+	public ApiResponse<Void> changePassword(@Valid @RequestBody ChangePasswordRequest req) {
+		authService.changePassword(AuthContext.currentUserId(), req.oldPassword(), req.newPassword());
+		return ApiResponse.ok("密码已修改", null);
 	}
 
 	@PostMapping("/logout")

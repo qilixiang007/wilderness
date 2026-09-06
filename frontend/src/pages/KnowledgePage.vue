@@ -67,6 +67,30 @@ async function deleteFile(file) {
 	}
 }
 
+// —— 文件预览(按知识库分块顺序展示,而非还原原始文件)——
+const previewOpen = ref(false)
+const previewData = ref(null)
+const previewLoading = ref(false)
+const previewError = ref('')
+
+async function openPreview(file) {
+	previewOpen.value = true
+	previewData.value = null
+	previewError.value = ''
+	previewLoading.value = true
+	try {
+		previewData.value = await api.previewKnowledgeFile(file.id)
+	} catch (err) {
+		previewError.value = err.message || t('knowledge.previewFailed')
+	} finally {
+		previewLoading.value = false
+	}
+}
+
+function closePreview() {
+	previewOpen.value = false
+}
+
 onMounted(loadFiles)
 watch(isLoggedIn, (v) => {
 	if (v) loadFiles()
@@ -125,12 +149,42 @@ watch(isLoggedIn, (v) => {
 				<div v-for="f in myFiles" :key="f.id" class="file-row">
 					<span class="file-name" :title="f.fileName">{{ f.fileName }}</span>
 					<span class="file-meta">{{ f.charCount }} {{ $t('knowledge.chars') }} · {{ f.chunkCount }} {{ $t('knowledge.chunks') }}</span>
+					<button class="file-preview" type="button" @click="openPreview(f)">
+						{{ $t('knowledge.previewFile') }}
+					</button>
 					<button class="file-delete" type="button" :disabled="deletingId === f.id" @click="deleteFile(f)">
 						{{ $t('knowledge.deleteFile') }}
 					</button>
 				</div>
 			</div>
 		</section>
+
+		<div v-if="previewOpen" class="preview-overlay" @click.self="closePreview">
+			<div class="preview-panel">
+				<div class="preview-header">
+					<h4 class="preview-title" :title="previewData?.fileName">
+						{{ previewData?.fileName || $t('knowledge.previewTitle') }}
+					</h4>
+					<button class="preview-close" type="button" @click="closePreview">{{ $t('knowledge.previewClose') }}</button>
+				</div>
+				<p v-if="previewLoading" class="preview-status">{{ $t('knowledge.previewLoading') }}</p>
+				<p v-else-if="previewError" class="preview-status preview-error">{{ previewError }}</p>
+				<template v-else-if="previewData">
+					<p v-if="previewData.chunks.length < previewData.chunkCount" class="preview-note">
+						{{ $t('knowledge.previewTruncated', { shown: previewData.chunks.length, total: previewData.chunkCount }) }}
+					</p>
+					<div v-if="previewData.chunks.length === 0" class="preview-status">{{ $t('knowledge.previewEmpty') }}</div>
+					<div v-else class="preview-body">
+						<div v-for="(chunk, i) in previewData.chunks" :key="i" class="preview-chunk">
+							<p class="preview-chunk-label">
+								{{ $t('knowledge.previewSegment', { index: i + 1, total: previewData.chunkCount }) }}
+							</p>
+							<p class="preview-chunk-text">{{ chunk }}</p>
+						</div>
+					</div>
+				</template>
+			</div>
+		</div>
 	</main>
 </template>
 
@@ -293,6 +347,7 @@ watch(isLoggedIn, (v) => {
 	font-size: 0.78rem;
 }
 
+.file-preview,
 .file-delete {
 	flex-shrink: 0;
 	padding: 0.25rem 0.7rem;
@@ -306,6 +361,11 @@ watch(isLoggedIn, (v) => {
 	transition: background 0.2s ease, color 0.2s ease;
 }
 
+.file-preview:hover {
+	background: var(--panel-glow);
+	color: var(--text);
+}
+
 .file-delete:hover {
 	background: var(--panel-glow);
 	color: var(--danger, #e57373);
@@ -314,5 +374,110 @@ watch(isLoggedIn, (v) => {
 .file-delete:disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
+}
+
+.preview-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1.5rem;
+	z-index: 100;
+}
+
+.preview-panel {
+	width: min(40rem, 100%);
+	max-height: 80vh;
+	display: flex;
+	flex-direction: column;
+	background: var(--bg-soft);
+	border: 1px solid var(--card-border);
+	border-radius: 0.75rem;
+	overflow: hidden;
+}
+
+.preview-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.6rem;
+	padding: 0.8rem 1rem;
+	border-bottom: 1px solid var(--card-border);
+}
+
+.preview-title {
+	margin: 0;
+	font-size: 0.95rem;
+	color: var(--text);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.preview-close {
+	flex-shrink: 0;
+	padding: 0.25rem 0.7rem;
+	border: 1px solid var(--button-border);
+	border-radius: 999px;
+	background: var(--button-bg);
+	color: var(--muted);
+	font: inherit;
+	font-size: 0.78rem;
+	cursor: pointer;
+}
+
+.preview-close:hover {
+	background: var(--panel-glow);
+	color: var(--text);
+}
+
+.preview-status {
+	padding: 1.2rem 1rem;
+	margin: 0;
+	font-size: 0.85rem;
+	color: var(--muted);
+}
+
+.preview-error {
+	color: var(--danger, #e57373);
+}
+
+.preview-note {
+	margin: 0;
+	padding: 0.5rem 1rem 0;
+	font-size: 0.78rem;
+	color: var(--muted);
+}
+
+.preview-body {
+	overflow-y: auto;
+	padding: 0.4rem 1rem 1rem;
+}
+
+.preview-chunk {
+	padding: 0.6rem 0;
+	border-bottom: 1px solid var(--card-border);
+}
+
+.preview-chunk:last-child {
+	border-bottom: none;
+}
+
+.preview-chunk-label {
+	margin: 0 0 0.3rem;
+	font-size: 0.72rem;
+	color: var(--accent);
+	letter-spacing: 0.02em;
+}
+
+.preview-chunk-text {
+	margin: 0;
+	font-size: 0.85rem;
+	line-height: 1.6;
+	color: var(--text);
+	white-space: pre-wrap;
+	word-break: break-word;
 }
 </style>

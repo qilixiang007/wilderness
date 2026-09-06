@@ -4,6 +4,7 @@ import com.wilderness.backend.dto.CompareItemResult;
 import com.wilderness.backend.dto.ExplainResponse;
 import com.wilderness.backend.dto.ObjectDetailDTO;
 import com.wilderness.backend.service.CelestialObjectService;
+import com.wilderness.backend.service.CompareHistoryService;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -67,7 +68,7 @@ class CompareServiceTest {
         when(ragService.explain(eq("mars"), eq(42L))).thenReturn(new ExplainResponse("火星讲解", List.of()));
         when(assistant.compareOverview(anyString())).thenReturn("综合总结");
 
-        CompareService service = new CompareService(ragService, objectService, assistant, executor, 60, 60);
+        CompareService service = new CompareService(ragService, objectService, assistant, mock(CompareHistoryService.class), executor, 60, 60);
         Recorder r = Recorder.create();
         run(service, List.of("earth", "mars"), 42L, r);
 
@@ -91,7 +92,7 @@ class CompareServiceTest {
         when(ragService.explain(eq("ghost"), any())).thenThrow(new IllegalArgumentException("无资料"));
         when(assistant.compareOverview(anyString())).thenReturn("综合总结");
 
-        CompareService service = new CompareService(ragService, objectService, assistant, executor, 60, 60);
+        CompareService service = new CompareService(ragService, objectService, assistant, mock(CompareHistoryService.class), executor, 60, 60);
         Recorder r = Recorder.create();
         run(service, List.of("earth", "ghost"), null, r);
 
@@ -112,7 +113,7 @@ class CompareServiceTest {
         when(objectService.findBySlug(anyString())).thenReturn(detail("x", "x", "x"));
         when(ragService.explain(anyString(), any())).thenThrow(new IllegalArgumentException("无资料"));
 
-        CompareService service = new CompareService(ragService, objectService, assistant, executor, 60, 60);
+        CompareService service = new CompareService(ragService, objectService, assistant, mock(CompareHistoryService.class), executor, 60, 60);
         Recorder r = Recorder.create();
         run(service, List.of("a", "b"), null, r);
 
@@ -132,7 +133,7 @@ class CompareServiceTest {
         when(ragService.explain(anyString(), any())).thenReturn(new ExplainResponse("讲解", List.of()));
         when(assistant.compareOverview(anyString())).thenThrow(new RuntimeException("LLM 调用失败"));
 
-        CompareService service = new CompareService(ragService, objectService, assistant, executor, 60, 60);
+        CompareService service = new CompareService(ragService, objectService, assistant, mock(CompareHistoryService.class), executor, 60, 60);
         Recorder r = Recorder.create();
         run(service, List.of("earth", "mars"), null, r);
 
@@ -157,7 +158,7 @@ class CompareServiceTest {
         });
         when(assistant.compareOverview(anyString())).thenReturn("综合总结");
 
-        CompareService service = new CompareService(ragService, objectService, assistant, executor, 1, 1);
+        CompareService service = new CompareService(ragService, objectService, assistant, mock(CompareHistoryService.class), executor, 1, 1);
         Recorder r = Recorder.create();
         long start = System.currentTimeMillis();
         run(service, List.of("earth", "stuck"), null, r);
@@ -175,7 +176,7 @@ class CompareServiceTest {
         CelestialObjectService objectService = mock(CelestialObjectService.class);
         AiAssistant assistant = mock(AiAssistant.class);
 
-        CompareService service = new CompareService(ragService, objectService, assistant, executor, 60, 60);
+        CompareService service = new CompareService(ragService, objectService, assistant, mock(CompareHistoryService.class), executor, 60, 60);
         Recorder r = Recorder.create();
         run(service, List.of("earth", "earth"), null, r);
 

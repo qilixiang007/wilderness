@@ -4,6 +4,7 @@ import com.wilderness.backend.dto.CompareItemResult;
 import com.wilderness.backend.dto.ExplainResponse;
 import com.wilderness.backend.dto.ObjectDetailDTO;
 import com.wilderness.backend.service.CelestialObjectService;
+import com.wilderness.backend.service.CompareHistoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,7 @@ public class CompareService {
     private final RagService ragService;
     private final CelestialObjectService celestialObjectService;
     private final AiAssistant assistant;
+    private final CompareHistoryService compareHistoryService;
     private final Executor aiCompareExecutor;
     private final long itemTimeoutSeconds;
     private final long overviewTimeoutSeconds;
@@ -44,20 +46,23 @@ public class CompareService {
     public CompareService(RagService ragService,
                           CelestialObjectService celestialObjectService,
                           AiAssistant assistant,
+                          CompareHistoryService compareHistoryService,
                           @Qualifier("aiCompareExecutor") Executor aiCompareExecutor) {
-        this(ragService, celestialObjectService, assistant, aiCompareExecutor, DEFAULT_TIMEOUT_SECONDS, DEFAULT_TIMEOUT_SECONDS);
+        this(ragService, celestialObjectService, assistant, compareHistoryService, aiCompareExecutor, DEFAULT_TIMEOUT_SECONDS, DEFAULT_TIMEOUT_SECONDS);
     }
 
     /** 供测试注入更短的超时,避免真实等待 60s 才能验证超时降级路径。 */
     CompareService(RagService ragService,
                    CelestialObjectService celestialObjectService,
                    AiAssistant assistant,
+                   CompareHistoryService compareHistoryService,
                    Executor aiCompareExecutor,
                    long itemTimeoutSeconds,
                    long overviewTimeoutSeconds) {
         this.ragService = ragService;
         this.celestialObjectService = celestialObjectService;
         this.assistant = assistant;
+        this.compareHistoryService = compareHistoryService;
         this.aiCompareExecutor = aiCompareExecutor;
         this.itemTimeoutSeconds = itemTimeoutSeconds;
         this.overviewTimeoutSeconds = overviewTimeoutSeconds;
@@ -98,6 +103,7 @@ public class CompareService {
                     .orTimeout(overviewTimeoutSeconds, TimeUnit.SECONDS)
                     .exceptionally(e -> null)
                     .join();
+            compareHistoryService.save(userId, items, overview);
             onOverview.accept(overview);
             onDone.run();
         } catch (Exception e) {

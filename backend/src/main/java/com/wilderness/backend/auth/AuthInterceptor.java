@@ -26,7 +26,8 @@ public class AuthInterceptor implements HandlerInterceptor {
 			"/api/history/**",
 			"/api/agents/**",
 			"/api/auth/logout",
-			"/api/auth/me"
+			"/api/auth/me",
+			"/api/auth/change-password"
 	};
 
 	private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();

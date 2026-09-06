@@ -3,9 +3,9 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, openCompareStream } from '../api'
 import { COMPARE_MAX } from '../composables/useCompare'
-import { dedupeSourcesBySlug } from '../utils/sources'
 import { pick } from '../i18n'
 import MarkdownView from '../components/MarkdownView.vue'
+import ExplainResultCard from '../components/ExplainResultCard.vue'
 
 const route = useRoute()
 
@@ -127,25 +127,7 @@ onBeforeUnmount(() => currentStream?.close())
 					<h4>{{ $t('compare.explainHeading') }}</h4>
 					<span v-if="pendingCount > 0" class="pending-hint">{{ $t('compare.itemsPending', { n: pendingCount }) }}</span>
 				</div>
-				<article v-for="item in compareItems" :key="item.slug" class="info-card explain-card">
-					<h4>{{ item.error ? item.slug : pick(item.zhName, item.enName) }}</h4>
-					<p v-if="item.error" class="load-error-text">{{ item.error }}</p>
-					<template v-else>
-						<MarkdownView :content="item.answer" />
-						<div v-if="item.sources && item.sources.length" class="explain-sources">
-							<span class="sources-label">{{ $t('common.sources') }}</span>
-							<RouterLink
-								v-for="(s, si) in dedupeSourcesBySlug(item.sources)"
-								:key="si"
-								:to="`/object/${s.slug}`"
-								class="source-chip"
-								:title="s.excerpt"
-							>
-								{{ s.title }}<span class="source-type">{{ s.type }}</span>
-							</RouterLink>
-						</div>
-					</template>
-				</article>
+				<ExplainResultCard v-for="item in compareItems" :key="item.slug" :item="item" />
 
 				<!-- 综合对比：等所有讲解都完成后才会开始生成 -->
 				<div class="section-heading compact object-heading">
@@ -205,43 +187,6 @@ onBeforeUnmount(() => currentStream?.close())
 	display: block;
 	margin-top: 4px;
 	font-size: 0.82rem;
-	color: var(--muted);
-}
-
-.explain-sources {
-	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 0.4rem;
-	margin-top: 0.9rem;
-}
-
-.sources-label {
-	font-size: 0.78rem;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	color: var(--muted);
-	margin: 0 0.25rem 0 0.15rem;
-}
-
-.source-chip {
-	font-size: 0.82rem;
-	color: var(--accent);
-	border: 1px solid var(--button-border);
-	border-radius: 999px;
-	padding: 0.2rem 0.7rem;
-	text-decoration: none;
-	transition: background 0.2s ease;
-}
-
-.source-chip:hover {
-	background: var(--panel-glow);
-}
-
-.source-type {
-	margin-left: 0.35rem;
-	font-size: 0.72rem;
-	text-transform: uppercase;
 	color: var(--muted);
 }
 </style>

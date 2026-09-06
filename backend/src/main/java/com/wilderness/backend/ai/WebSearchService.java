@@ -1,5 +1,7 @@
 package com.wilderness.backend.ai;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,8 @@ import java.util.List;
 @ConditionalOnExpression("!('${wilderness.ai.dashscope.api-key:}'.trim().isEmpty())")
 public class WebSearchService {
 
+    private static final Logger log = LoggerFactory.getLogger(WebSearchService.class);
+
     private final List<WebSearchSource> sources;
     private final int maxResults;
     private final int maxCharacters;
@@ -27,11 +31,19 @@ public class WebSearchService {
         this.maxCharacters = maxCharacters;
     }
 
-    /** 对 query 联网检索,返回去重、截断后的结果。 */
-    public List<WebResult> search(String query) throws Exception {
+    /**
+     * 对 query 联网检索,返回去重、截断后的结果。
+     * 联网检索是本地知识库之外的"锦上添花",单个检索源超时/不可达(如必应被墙、网络抖动)
+     * 不应该拖垮整个问答请求,因此这里按源隔离异常,失败的源直接跳过。
+     */
+    public List<WebResult> search(String query) {
         List<WebResult> all = new ArrayList<>();
         for (WebSearchSource source : sources) {
-            all.addAll(source.search(query, maxResults));
+            try {
+                all.addAll(source.search(query, maxResults));
+            } catch (Exception e) {
+                log.warn("联网检索源 [{}] 失败,跳过: {}", source.name(), e.toString());
+            }
         }
         return all.stream()
                 .filter(r -> r.snippet() != null && !r.snippet().isBlank())

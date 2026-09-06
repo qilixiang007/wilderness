@@ -172,6 +172,18 @@ export const api = {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ email, code })
 		}),
+	resetPassword: (email, code, newPassword) =>
+		request('/api/auth/reset-password', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, code, newPassword })
+		}),
+	changePassword: (oldPassword, newPassword) =>
+		request('/api/auth/change-password', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ oldPassword, newPassword })
+		}),
 	logout: () => request('/api/auth/logout', { method: 'POST' }),
 	me: () => request('/api/auth/me'),
 	// —— 收藏（按用户隔离）——
@@ -180,6 +192,7 @@ export const api = {
 	removeFavorite: (slug) => request(`/api/favorites/${encodeURIComponent(slug)}`, { method: 'DELETE' }),
 	// —— 个人知识库文件 ——
 	getKnowledgeFiles: () => request('/api/knowledge/files'),
+	previewKnowledgeFile: (id) => request(`/api/knowledge/files/${id}/preview`),
 	deleteKnowledgeFile: (id) => request(`/api/knowledge/files/${id}`, { method: 'DELETE' }),
 	// —— 对话历史（仅当前用户）——
 	getHistory: (page = 0, size = 20, q = '') => {
@@ -188,6 +201,9 @@ export const api = {
 		return request(`/api/history?${params.toString()}`)
 	},
 	deleteHistory: (id) => request(`/api/history/${id}`, { method: 'DELETE' }),
+	// —— 对比历史（仅当前用户；对比完成后后端自动落库，无需手动保存）——
+	getCompareHistory: (page = 0, size = 20) => request(`/api/history/compare?page=${page}&size=${size}`),
+	deleteCompareHistory: (id) => request(`/api/history/compare/${id}`, { method: 'DELETE' }),
 	// —— 自定义智能体（按用户隔离）——
 	getAgents: () => request('/api/agents'),
 	createAgent: (payload) =>

@@ -27,11 +27,14 @@ public class VerifyCodeService {
 	private final StringRedisTemplate redis;
 	private final AuthProperties props;
 	private final EmailService emailService;
+	private final LoginAttemptService loginAttemptService;
 
-	public VerifyCodeService(StringRedisTemplate redis, AuthProperties props, EmailService emailService) {
+	public VerifyCodeService(StringRedisTemplate redis, AuthProperties props, EmailService emailService,
+			LoginAttemptService loginAttemptService) {
 		this.redis = redis;
 		this.props = props;
 		this.emailService = emailService;
+		this.loginAttemptService = loginAttemptService;
 	}
 
 	/**
@@ -55,13 +58,20 @@ public class VerifyCodeService {
 		return "email";
 	}
 
-	/** 校验验证码；错误/过期抛 400。校验成功即删除（一次性使用）。 */
+	/**
+	 * 校验验证码；错误/过期抛 400。校验成功即删除（一次性使用）。
+	 * 同一"邮箱+用途"连续猜错达到阈值会被锁定一段时间，防止暴力穷举 6 位验证码。
+	 */
 	public void verify(String email, String purpose, String code) {
+		String attemptKey = email + ":" + purpose;
+		loginAttemptService.assertNotLocked(attemptKey);
 		String key = CODE_KEY + email + ":" + purpose;
 		String expected = redis.opsForValue().get(key);
 		if (expected == null || code == null || !expected.equals(code)) {
+			loginAttemptService.onFailure(attemptKey);
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "验证码错误或已过期");
 		}
+		loginAttemptService.onSuccess(attemptKey);
 		redis.delete(key);
 	}
 }

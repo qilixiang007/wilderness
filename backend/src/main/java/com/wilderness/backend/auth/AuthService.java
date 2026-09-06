@@ -21,24 +21,25 @@ public class AuthService {
 	private final VerifyCodeService verifyCodeService;
 	private final SessionService sessionService;
 	private final AuthProperties props;
+	private final LoginAttemptService loginAttemptService;
 	private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
 	public AuthService(UserRepository userRepository,
 			VerifyCodeService verifyCodeService,
 			SessionService sessionService,
-			AuthProperties props) {
+			AuthProperties props,
+			LoginAttemptService loginAttemptService) {
 		this.userRepository = userRepository;
 		this.verifyCodeService = verifyCodeService;
 		this.sessionService = sessionService;
 		this.props = props;
+		this.loginAttemptService = loginAttemptService;
 	}
 
 	public LoginResult register(String email, String password, String code) {
 		email = User.normalizeEmail(email);
 		requireEmail(email);
-		if (password == null || password.length() < 6) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "密码长度至少 6 位");
-		}
+		PasswordPolicy.validate(password);
 		if (userRepository.existsByEmail(email)) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "该邮箱已注册，请直接登录");
 		}
@@ -51,14 +52,19 @@ public class AuthService {
 		return loginResult(user);
 	}
 
+	/** 密码登录；同一邮箱连续失败达到阈值会被暂时锁定，防止暴力破解密码。 */
 	public LoginResult loginPassword(String email, String password) {
 		email = User.normalizeEmail(email);
 		requireEmail(email);
-		User user = userRepository.findByEmail(email)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "邮箱或密码错误"));
-		if (!encoder.matches(password == null ? "" : password, user.getPasswordHash())) {
+		loginAttemptService.assertNotLocked(email);
+		User user = userRepository.findByEmail(email).orElse(null);
+		boolean matched = user != null
+				&& encoder.matches(password == null ? "" : password, user.getPasswordHash());
+		if (!matched) {
+			loginAttemptService.onFailure(email);
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "邮箱或密码错误");
 		}
+		loginAttemptService.onSuccess(email);
 		return loginResult(user);
 	}
 
@@ -69,6 +75,39 @@ public class AuthService {
 		User user = userRepository.findByEmail(email)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "用户不存在，请先注册"));
 		return loginResult(user);
+	}
+
+	/** 找回密码：校验邮箱验证码（purpose=reset）后，用新密码覆盖旧密码哈希。 */
+	@Transactional
+	public void resetPassword(String email, String code, String newPassword) {
+		email = User.normalizeEmail(email);
+		requireEmail(email);
+		PasswordPolicy.validate(newPassword);
+		User user = userRepository.findByEmail(email)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "该邮箱尚未注册"));
+		verifyCodeService.verify(email, "reset", code);
+		user.updatePasswordHash(encoder.encode(newPassword));
+		userRepository.save(user);
+	}
+
+	/** 登录状态下修改密码：需校验原密码，且原密码连续猜错达到阈值会被暂时锁定。 */
+	@Transactional
+	public void changePassword(Long userId, String oldPassword, String newPassword) {
+		if (userId == null) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "请先登录");
+		}
+		PasswordPolicy.validate(newPassword);
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "会话已失效，请重新登录"));
+		String lockKey = "chpwd:" + userId;
+		loginAttemptService.assertNotLocked(lockKey);
+		if (!encoder.matches(oldPassword == null ? "" : oldPassword, user.getPasswordHash())) {
+			loginAttemptService.onFailure(lockKey);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "原密码错误");
+		}
+		loginAttemptService.onSuccess(lockKey);
+		user.updatePasswordHash(encoder.encode(newPassword));
+		userRepository.save(user);
 	}
 
 	/** 登出：删除 Redis 中的会话。token 为空时静默成功（幂等）。 */

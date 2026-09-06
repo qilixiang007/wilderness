@@ -89,7 +89,15 @@ export default {
 		deleteFile: 'Delete',
 		deleteFailed: 'Delete failed.',
 		chars: 'chars',
-		chunks: 'chunks'
+		chunks: 'chunks',
+		previewFile: 'Preview',
+		previewTitle: 'File preview',
+		previewLoading: 'Loading…',
+		previewFailed: 'Failed to load preview.',
+		previewSegment: 'Segment {index}/{total}',
+		previewTruncated: 'This file has many chunks — showing the first {shown} of {total}',
+		previewEmpty: 'No chunk content found.',
+		previewClose: 'Close'
 	},
 	ask: {
 		kicker: 'AI ASSISTANT · RAG',
@@ -211,12 +219,18 @@ export default {
 		offline: 'Backend unreachable; favorites unavailable.'
 	},
 	history: {
-		kicker: 'CONVERSATION HISTORY',
+		kicker: 'HISTORY',
 		title: 'History',
+		tabs: {
+			conversation: 'Conversations',
+			compare: 'Comparisons'
+		},
 		intro: 'Every AI conversation is persisted (MySQL + async ES index) and archived here by day, with search and delete.',
+		compareIntro: 'Every completed multi-object comparison is saved automatically (MySQL, per-account) and archived here by day, with delete.',
 		searchPlaceholder: 'Search by question…',
 		search: 'Search',
 		empty: 'No conversations yet. Go ask the AI assistant.',
+		compareEmpty: 'No comparisons yet. Go pick a few objects to compare.',
 		offline: 'Backend unreachable; history unavailable.',
 		loadFailed: 'Failed to load. Please retry.',
 		loadMore: 'Load more',
@@ -237,7 +251,7 @@ export default {
 		email: 'Email',
 		emailPlaceholder: 'Enter your email address',
 		password: 'Password',
-		passwordHint: 'At least 6 characters',
+		passwordHint: 'At least 8 characters, letters and digits',
 		code: 'Code',
 		codePlaceholder: '6-digit code',
 		sendCode: 'Send code',
@@ -255,8 +269,27 @@ export default {
 		emailRequired: 'Email is required',
 		passwordRequired: 'Password is required',
 		codeRequired: 'Code is required',
-		passwordTooShort: 'Password must be at least 6 characters',
+		passwordTooShort: 'Password must be 8-64 characters, with both letters and digits',
 		sendCodeFailed: 'Failed to send code',
-		loginFailed: 'Login failed'
+		loginFailed: 'Login failed',
+		forgotPassword: 'Forgot password?',
+		backToLogin: 'Back to log in',
+		resetTitle: 'Reset password',
+		newPassword: 'New password',
+		newPasswordRequired: 'Please enter a new password',
+		resetSubmit: 'Reset password',
+		resetSuccess: 'Password reset — please log in with your new password'
+	},
+	account: {
+		kicker: 'Account settings',
+		title: 'Change password',
+		oldPassword: 'Current password',
+		newPassword: 'New password',
+		confirmPassword: 'Confirm new password',
+		oldPasswordRequired: 'Please enter your current password',
+		confirmMismatch: 'The new passwords do not match',
+		changeSubmit: 'Change password',
+		changeSuccess: 'Password changed',
+		changeFailed: 'Failed to change password. Please retry.'
 	}
 }

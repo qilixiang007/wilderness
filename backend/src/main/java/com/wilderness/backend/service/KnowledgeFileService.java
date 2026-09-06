@@ -1,9 +1,12 @@
 package com.wilderness.backend.service;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
 import com.wilderness.backend.ai.ElasticsearchIndexManager;
 import com.wilderness.backend.domain.KnowledgeDocument;
 import com.wilderness.backend.dto.KnowledgeFileDTO;
+import com.wilderness.backend.dto.KnowledgeFilePreviewDTO;
 import com.wilderness.backend.repository.KnowledgeDocumentRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.HttpStatus;
@@ -12,14 +15,19 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 /**
- * 「我的文件」:列出当前用户上传过的文件、删除文件。
+ * 「我的文件」:列出当前用户上传过的文件、预览分块内容、删除文件。
  * 删除 = 从 ES 按 user_id + file_name 移除对应块,再删清单行。
  */
 @Service
 @ConditionalOnExpression("!('${wilderness.ai.dashscope.api-key:}'.trim().isEmpty())")
 public class KnowledgeFileService {
+
+	/** 单次预览最多拉取的分块数,避免超大文件一次性拖回全部内容。 */
+	private static final int MAX_PREVIEW_CHUNKS = 300;
 
 	private final KnowledgeDocumentRepository repository;
 	private final ElasticsearchClient es;
@@ -38,6 +46,32 @@ public class KnowledgeFileService {
 				.map(d -> new KnowledgeFileDTO(d.getId(), d.getFileName(), d.getType(),
 						d.getCharCount(), d.getChunkCount(), d.getUploadedAt()))
 				.toList();
+	}
+
+	/** 按 chunk_index 顺序取出该文件在知识库中的全部分块文本,供前端分段预览。 */
+	public KnowledgeFilePreviewDTO preview(Long id, Long userId) throws Exception {
+		KnowledgeDocument doc = repository.findByIdAndUserId(id, userId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "文件不存在"));
+		int size = Math.min(Math.max(doc.getChunkCount(), 1), MAX_PREVIEW_CHUNKS);
+
+		SearchResponse<Map> resp = es.search(s -> s
+						.index(indexManager.indexName())
+						.query(q -> q.bool(b -> b
+								.must(m -> m.term(t -> t.field("user_id").value(String.valueOf(userId))))
+								.must(m -> m.term(t -> t.field("file_name").value(doc.getFileName())))))
+						.sort(so -> so.field(f -> f.field("chunk_index").order(SortOrder.Asc)))
+						.size(size)
+						.source(so -> so.filter(f -> f.includes("content"))),
+				Map.class);
+
+		List<String> chunks = resp.hits().hits().stream()
+				.map(h -> h.source())
+				.filter(Objects::nonNull)
+				.map(src -> String.valueOf(src.get("content")))
+				.toList();
+
+		return new KnowledgeFilePreviewDTO(doc.getFileName(), doc.getType(),
+				doc.getCharCount(), doc.getChunkCount(), chunks);
 	}
 
 	@Transactional

@@ -58,6 +58,11 @@ public class User {
 		return passwordHash;
 	}
 
+	/** 重置密码等场景下更新密码哈希。 */
+	public void updatePasswordHash(String passwordHash) {
+		this.passwordHash = passwordHash;
+	}
+
 	public Instant getCreatedAt() {
 		return createdAt;
 	}

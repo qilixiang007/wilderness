@@ -9,6 +9,7 @@ import ComparePage from './pages/ComparePage.vue'
 import FavoritesPage from './pages/FavoritesPage.vue'
 import HistoryPage from './pages/HistoryPage.vue'
 import AuthPage from './pages/AuthPage.vue'
+import AccountPage from './pages/AccountPage.vue'
 
 export default [
 	{ path: '/', component: HomePage, meta: { titleKey: 'site.title' } },
@@ -21,5 +22,6 @@ export default [
 	{ path: '/compare', component: ComparePage, meta: { titleKey: 'compare.title' } },
 	{ path: '/favorites', component: FavoritesPage, meta: { requiresAuth: true, titleKey: 'favorites.title' } },
 	{ path: '/history', component: HistoryPage, meta: { requiresAuth: true, titleKey: 'history.title' } },
-	{ path: '/login', component: AuthPage, meta: { titleKey: 'auth.title' } }
+	{ path: '/login', component: AuthPage, meta: { titleKey: 'auth.title' } },
+	{ path: '/account', component: AccountPage, meta: { requiresAuth: true, titleKey: 'account.title' } }
 ]
