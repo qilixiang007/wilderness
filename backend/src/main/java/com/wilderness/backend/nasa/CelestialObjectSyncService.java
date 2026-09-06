@@ -19,16 +19,18 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * 权威数据落地：包内 NASA NSSDCA Fact Sheet 快照目录
- * （resources/nasa/fact-sheet-snapshots.json，2026-09 核实），现覆盖太阳与地球/火星/木星/土星。
+ * 权威数据落地：包内官方页面快照目录（resources/nasa/fact-sheet-snapshots.json，2026-09 核实），
+ * 现覆盖太阳、地球/火星/木星/土星四行星、月球/泰坦/欧罗巴三颗卫星，以及此前科普自采数值的
+ * 天狼星/参宿四两颗恒星、银河系/仙女座两星系、猎户座/蟹状两星云、哈雷彗星与矮行星谷神星
+ * （后八者按各自主源机构如实标注，来源页与数值均已核实）。
  *
  * 启动就绪后（DataSeeder 之后）按 slug 逐个应用：对象还没有来源标记时，把快照里受控的
  * 数值行就地更新（半径覆盖为 NASA 精确值，质量/平均密度/表面重力追加），并给对象打上来源
  * 标注；已带来源标记的对象（如先前应用过的太阳）直接跳过。之后每次启动见标记即跳过，
  * 不再改动数据库。物理参数近静态，仅在首次/无来源标记时应用一次。
  *
- * 不做在线同步：NSSDCA fact sheet 站点已整体下线（307 至门户页）、archive.org 大陆不可达，
- * 快照为打包数据、离线可靠。best-effort：单个对象失败只记日志、保留其现有数据，不影响其它对象。
+ * 不做在线同步：各对象的权威数值经人工逐一核实后打包进快照，离线可靠、可复核。
+ * best-effort：单个对象失败只记日志、保留其现有数据，不影响其它对象。
  */
 @Service
 public class CelestialObjectSyncService {

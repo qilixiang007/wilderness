@@ -89,8 +89,9 @@ wilderness:
       enabled: ${ROCKETMQ_ENABLED:false}
       topic: conversation-topic
   nasa:
-    # 权威数据落地：包内 NASA NSSDCA 快照目录（太阳 + 地球/火星/木星/土星，resources/nasa/fact-sheet-snapshots.json），
-    # 仅在对象无来源标记时应用一次，之后启动跳过。
+    # 权威数据落地：包内官方快照目录（resources/nasa/fact-sheet-snapshots.json）——太阳、四大行星、
+    # 三颗卫星，及天狼星/参宿四、银河系/仙女座、猎户座/蟹状星云、哈雷彗星、谷神星共 8 个科普对象，
+    # 按各自主源机构（NASA NSSDCA / NASA/JPL / NASA/ESA Hubble 等）如实标注。仅在对象无来源标记时应用一次，之后启动跳过。
     enabled: true
 
 springdoc:

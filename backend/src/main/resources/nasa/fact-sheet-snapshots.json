@@ -53,6 +53,117 @@
         { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "568.32 ×10^24 千克", "enValue": "568.32 ×10^24 kg" },
         { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "687 千克/立方米", "enValue": "687 kg/m^3" }
       ]
+    },
+    {
+      "slug": "moon",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "1,737.4 千米", "enValue": "1,737.4 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "0.07346 ×10^24 千克", "enValue": "0.07346 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "3,344 千克/立方米", "enValue": "3,344 kg/m^3" },
+        { "sortOrder": 8, "zhLabel": "表面重力", "enLabel": "Surface gravity", "zhValue": "1.62 米/秒^2", "enValue": "1.62 m/s^2" }
+      ]
+    },
+    {
+      "slug": "titan",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/saturniansatfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "2,574.7 千米", "enValue": "2,574.7 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "0.13452 ×10^24 千克", "enValue": "0.13452 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "1,880 千克/立方米", "enValue": "1,880 kg/m^3" },
+        { "sortOrder": 8, "zhLabel": "表面重力", "enLabel": "Surface gravity", "zhValue": "1.35 米/秒^2", "enValue": "1.35 m/s^2" }
+      ]
+    },
+    {
+      "slug": "europa",
+      "dataSource": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/joviansatfact.html",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "1,560.8 千米", "enValue": "1,560.8 km" },
+        { "sortOrder": 6, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "0.047998 ×10^24 千克", "enValue": "0.047998 ×10^24 kg" },
+        { "sortOrder": 7, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "3,013 千克/立方米", "enValue": "3,013 kg/m^3" },
+        { "sortOrder": 8, "zhLabel": "表面重力", "enLabel": "Surface gravity", "zhValue": "1.31 米/秒^2", "enValue": "1.31 m/s^2" }
+      ]
+    },
+    {
+      "slug": "sirius",
+      "dataSource": "NASA/ESA Hubble",
+      "sourceUrl": "https://esahubble.org/images/heic0516a/",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "距地球", "enLabel": "Distance from Earth", "zhValue": "约 8.6 光年", "enValue": "about 8.6 light-years" },
+        { "sortOrder": 5, "zhLabel": "光谱型", "enLabel": "Spectral type", "zhValue": "A1V（主序星）", "enValue": "A1V main-sequence star" },
+        { "sortOrder": 6, "zhLabel": "表面温度", "enLabel": "Surface temperature", "zhValue": "约 9,940 K", "enValue": "about 9,940 K" },
+        { "sortOrder": 7, "zhLabel": "伴星", "enLabel": "Companion", "zhValue": "白矮星（天狼星 B），质量约为太阳的 0.98 倍", "enValue": "a white dwarf (Sirius B) with about 98% of the Sun's mass" }
+      ]
+    },
+    {
+      "slug": "betelgeuse",
+      "dataSource": "NASA/ESA Hubble",
+      "sourceUrl": "https://www.stsci.edu/contents/news-releases/2020/news-2020-44",
+      "facts": [
+        { "sortOrder": 2, "zhLabel": "距地球", "enLabel": "Distance from Earth", "zhValue": "约 725 光年", "enValue": "about 725 light-years" },
+        { "sortOrder": 5, "zhLabel": "大小对比", "enLabel": "Size comparison", "zhValue": "若放到太阳系中心，其边缘可延伸到木星轨道之外", "enValue": "if placed at the center of the Solar System, it would reach beyond the orbit of Jupiter" },
+        { "sortOrder": 6, "zhLabel": "表面温度", "enLabel": "Surface temperature", "zhValue": "约 3,600 K", "enValue": "about 3,600 K" }
+      ]
+    },
+    {
+      "slug": "milky-way",
+      "dataSource": "NASA（Imagine the Universe）",
+      "sourceUrl": "https://imagine.gsfc.nasa.gov/science/objects/milkyway1.html",
+      "facts": [
+        { "sortOrder": 2, "zhLabel": "直径", "enLabel": "Diameter", "zhValue": "约 10 万光年", "enValue": "about 100,000 light-years" },
+        { "sortOrder": 5, "zhLabel": "太阳距银心", "enLabel": "Sun's distance from the galactic center", "zhValue": "约 25,000 光年", "enValue": "about 25,000 light-years" }
+      ]
+    },
+    {
+      "slug": "andromeda",
+      "dataSource": "NASA",
+      "sourceUrl": "https://science.nasa.gov/universe/galaxies/",
+      "facts": [
+        { "sortOrder": 2, "zhLabel": "距地球", "enLabel": "Distance from Earth", "zhValue": "约 250 万光年", "enValue": "about 2.5 million light-years" },
+        { "sortOrder": 5, "zhLabel": "与银河系的关系", "enLabel": "Relation to the Milky Way", "zhValue": "银河系最近的大型星系邻居", "enValue": "our nearest large galactic neighbor" }
+      ]
+    },
+    {
+      "slug": "orion-nebula",
+      "dataSource": "NASA/ESA Hubble",
+      "sourceUrl": "https://esahubble.org/images/heic0601a/",
+      "facts": [
+        { "sortOrder": 2, "zhLabel": "距地球", "enLabel": "Distance from Earth", "zhValue": "约 1,344 光年", "enValue": "about 1,344 light-years" },
+        { "sortOrder": 5, "zhLabel": "直径", "enLabel": "Diameter", "zhValue": "约 24 光年", "enValue": "about 24 light-years" }
+      ]
+    },
+    {
+      "slug": "crab-nebula",
+      "dataSource": "NASA/ESA Hubble",
+      "sourceUrl": "https://hubblesite.org/contents/news-releases/2005/news-2005-37",
+      "facts": [
+        { "sortOrder": 2, "zhLabel": "距地球", "enLabel": "Distance from Earth", "zhValue": "约 6,500 光年", "enValue": "about 6,500 light-years" },
+        { "sortOrder": 5, "zhLabel": "脉冲星自转周期", "enLabel": "Pulsar spin period", "zhValue": "约 33 毫秒", "enValue": "about 33 milliseconds" }
+      ]
+    },
+    {
+      "slug": "halleys-comet",
+      "dataSource": "NASA/JPL",
+      "sourceUrl": "https://science.nasa.gov/solar-system/comets/1p-halley/",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "距太阳最近点", "enLabel": "Perihelion", "zhValue": "0.586 天文单位（约 8,800 万千米）", "enValue": "0.586 AU (about 88 million km)" },
+        { "sortOrder": 5, "zhLabel": "远日点", "enLabel": "Aphelion", "zhValue": "约 35.1 天文单位", "enValue": "about 35.1 AU" },
+        { "sortOrder": 6, "zhLabel": "彗核尺寸", "enLabel": "Nucleus size", "zhValue": "约 15 × 8 × 8 千米", "enValue": "about 15 × 8 × 8 km" }
+      ]
+    },
+    {
+      "slug": "ceres",
+      "dataSource": "NASA/JPL",
+      "sourceUrl": "https://science.nasa.gov/dwarf-planets/ceres/",
+      "facts": [
+        { "sortOrder": 3, "zhLabel": "半径", "enLabel": "Radius", "zhValue": "469.7 千米", "enValue": "469.7 km" },
+        { "sortOrder": 5, "zhLabel": "质量", "enLabel": "Mass", "zhValue": "9.38 ×10^20 千克", "enValue": "9.38 ×10^20 kg" },
+        { "sortOrder": 6, "zhLabel": "平均密度", "enLabel": "Mean density", "zhValue": "2,161 千克/立方米", "enValue": "2,161 kg/m^3" },
+        { "sortOrder": 7, "zhLabel": "表面重力", "enLabel": "Surface gravity", "zhValue": "0.28 米/秒^2", "enValue": "0.28 m/s^2" }
+      ]
     }
   ]
 }
