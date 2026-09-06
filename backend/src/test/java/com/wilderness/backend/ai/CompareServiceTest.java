@@ -1,19 +1,22 @@
 package com.wilderness.backend.ai;
 
 import com.wilderness.backend.dto.CompareItemResult;
-import com.wilderness.backend.dto.CompareResult;
 import com.wilderness.backend.dto.ExplainResponse;
 import com.wilderness.backend.dto.ObjectDetailDTO;
 import com.wilderness.backend.service.CelestialObjectService;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,7 +31,10 @@ import static org.mockito.Mockito.when;
 
 /**
  * CompareService 纯单元测试:mock RagService/CelestialObjectService/AiAssistant,
- * 真实线程池验证并行编排、单路降级、综合失败降级、超时兜底。不依赖 Spring/ES/真实 LLM。
+ * 真实线程池验证并行编排、逐项推送、单路降级、综合失败、超时兜底。不依赖 Spring/ES/真实 LLM。
+ * compareStream 内部把所有 CompletableFuture join 完才返回,所以测试方法调用它时是同步阻塞的——
+ * 断言时全部回调都已经发生过，不需要额外同步。收集回调结果的容器仍用线程安全类型，
+ * 因为 core=max=4 时多个 onItem 可能从不同的 executor 线程并发调用。
  */
 class CompareServiceTest {
 
@@ -36,6 +42,17 @@ class CompareServiceTest {
 
     private ObjectDetailDTO detail(String slug, String zhName, String enName) {
         return new ObjectDetailDTO(slug, zhName, enName, null, null, null, 0, null, List.of(), null, null, null);
+    }
+
+    private record Recorder(List<CompareItemResult> items, AtomicReference<String> overview,
+                             AtomicReference<Throwable> error, AtomicBoolean done) {
+        static Recorder create() {
+            return new Recorder(new CopyOnWriteArrayList<>(), new AtomicReference<>(), new AtomicReference<>(), new AtomicBoolean(false));
+        }
+    }
+
+    private void run(CompareService service, List<String> slugs, Long userId, Recorder r) {
+        service.compareStream(slugs, userId, r.items()::add, r.overview()::set, r.error()::set, () -> r.done().set(true));
     }
 
     @Test
@@ -51,10 +68,13 @@ class CompareServiceTest {
         when(assistant.compareOverview(anyString())).thenReturn("综合总结");
 
         CompareService service = new CompareService(ragService, objectService, assistant, executor, 60, 60);
-        CompareResult result = service.compare(List.of("earth", "mars"), 42L);
+        Recorder r = Recorder.create();
+        run(service, List.of("earth", "mars"), 42L, r);
 
-        assertEquals(2, result.items().size());
-        assertEquals("综合总结", result.overview());
+        assertEquals(2, r.items().size());
+        assertEquals("综合总结", r.overview().get());
+        assertNull(r.error().get());
+        assertTrue(r.done().get());
         verify(ragService).explain("earth", 42L);
         verify(ragService).explain("mars", 42L);
     }
@@ -72,13 +92,14 @@ class CompareServiceTest {
         when(assistant.compareOverview(anyString())).thenReturn("综合总结");
 
         CompareService service = new CompareService(ragService, objectService, assistant, executor, 60, 60);
-        CompareResult result = service.compare(List.of("earth", "ghost"), null);
+        Recorder r = Recorder.create();
+        run(service, List.of("earth", "ghost"), null, r);
 
-        CompareItemResult ghostItem = result.items().stream().filter(i -> i.slug().equals("ghost")).findFirst().orElseThrow();
+        CompareItemResult ghostItem = r.items().stream().filter(i -> i.slug().equals("ghost")).findFirst().orElseThrow();
         assertNotNull(ghostItem.error());
-        CompareItemResult earthItem = result.items().stream().filter(i -> i.slug().equals("earth")).findFirst().orElseThrow();
+        CompareItemResult earthItem = r.items().stream().filter(i -> i.slug().equals("earth")).findFirst().orElseThrow();
         assertNull(earthItem.error());
-        assertEquals("综合总结", result.overview());
+        assertEquals("综合总结", r.overview().get());
         verify(assistant, times(1)).compareOverview(anyString());
     }
 
@@ -92,10 +113,12 @@ class CompareServiceTest {
         when(ragService.explain(anyString(), any())).thenThrow(new IllegalArgumentException("无资料"));
 
         CompareService service = new CompareService(ragService, objectService, assistant, executor, 60, 60);
-        CompareResult result = service.compare(List.of("a", "b"), null);
+        Recorder r = Recorder.create();
+        run(service, List.of("a", "b"), null, r);
 
-        assertTrue(result.items().stream().allMatch(i -> i.error() != null));
-        assertNull(result.overview());
+        assertTrue(r.items().stream().allMatch(i -> i.error() != null));
+        assertNull(r.overview().get());
+        assertTrue(r.done().get());
         verify(assistant, never()).compareOverview(anyString());
     }
 
@@ -110,11 +133,12 @@ class CompareServiceTest {
         when(assistant.compareOverview(anyString())).thenThrow(new RuntimeException("LLM 调用失败"));
 
         CompareService service = new CompareService(ragService, objectService, assistant, executor, 60, 60);
-        CompareResult result = service.compare(List.of("earth", "mars"), null);
+        Recorder r = Recorder.create();
+        run(service, List.of("earth", "mars"), null, r);
 
-        assertNull(result.overview());
-        assertEquals(2, result.items().size());
-        assertTrue(result.items().stream().noneMatch(i -> i.error() != null));
+        assertNull(r.overview().get());
+        assertEquals(2, r.items().size());
+        assertTrue(r.items().stream().noneMatch(i -> i.error() != null));
     }
 
     @Test
@@ -134,13 +158,29 @@ class CompareServiceTest {
         when(assistant.compareOverview(anyString())).thenReturn("综合总结");
 
         CompareService service = new CompareService(ragService, objectService, assistant, executor, 1, 1);
+        Recorder r = Recorder.create();
         long start = System.currentTimeMillis();
-        CompareResult result = service.compare(List.of("earth", "stuck"), null);
+        run(service, List.of("earth", "stuck"), null, r);
         long elapsed = System.currentTimeMillis() - start;
 
         assertTrue(elapsed < 5000, "超时兜底应在秒级完成,而不是等到挂死线程真正结束");
-        CompareItemResult stuckItem = result.items().stream().filter(i -> i.slug().equals("stuck")).findFirst().orElseThrow();
+        CompareItemResult stuckItem = r.items().stream().filter(i -> i.slug().equals("stuck")).findFirst().orElseThrow();
         assertNotNull(stuckItem.error());
         latch.countDown();
+    }
+
+    @Test
+    void 少于2个不同天体触发onError且不推送任何item() throws Exception {
+        RagService ragService = mock(RagService.class);
+        CelestialObjectService objectService = mock(CelestialObjectService.class);
+        AiAssistant assistant = mock(AiAssistant.class);
+
+        CompareService service = new CompareService(ragService, objectService, assistant, executor, 60, 60);
+        Recorder r = Recorder.create();
+        run(service, List.of("earth", "earth"), null, r);
+
+        assertNotNull(r.error().get());
+        assertTrue(r.items().isEmpty());
+        assertFalse(r.done().get());
     }
 }

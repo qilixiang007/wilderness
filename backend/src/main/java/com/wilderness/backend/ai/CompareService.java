@@ -1,7 +1,6 @@
 package com.wilderness.backend.ai;
 
 import com.wilderness.backend.dto.CompareItemResult;
-import com.wilderness.backend.dto.CompareResult;
 import com.wilderness.backend.dto.ExplainResponse;
 import com.wilderness.backend.dto.ObjectDetailDTO;
 import com.wilderness.backend.service.CelestialObjectService;
@@ -10,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -19,12 +17,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * 多天体对比编排:并行生成各天体讲解,再综合成一段跨天体对比短文。
- * 单路失败(无资料/生成出错/超时)只降级该项,绝不让整批请求 500;
- * 综合调用失败同理只让 overview 为 null,不影响已生成的各篇讲解。
+ * 多天体对比编排(流式):并行生成各天体讲解,每篇一完成就通过 onItem 推送,
+ * 全部完成后再综合成一段跨天体对比短文并通过 onOverview 推送。
+ * 单路失败(无资料/生成出错/超时)只降级该项,绝不让整批中断;
+ * 综合调用失败同理只让 overview 为 null,不影响已推送的各篇讲解。
  */
 @Service
 @ConditionalOnExpression("!('${wilderness.ai.dashscope.api-key:}'.trim().isEmpty())")
@@ -63,25 +63,46 @@ public class CompareService {
         this.overviewTimeoutSeconds = overviewTimeoutSeconds;
     }
 
-    public CompareResult compare(List<String> slugs, Long userId) {
-        List<String> uniq = List.copyOf(new LinkedHashSet<>(slugs));
-        if (uniq.size() < 2) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请至少选择 2 个不同的天体");
+    /**
+     * @param onItem     每个天体的讲解一完成(成功或降级)就回调一次,顺序=完成顺序而非请求顺序
+     * @param onOverview 全部讲解完成后回调一次,传入综合总结(失败为 null)
+     * @param onError    校验失败或未预期异常时回调,调用方应结束整个流程
+     * @param onDone     正常走完全流程(已调过 onOverview)后回调
+     */
+    public void compareStream(List<String> slugs,
+                              Long userId,
+                              Consumer<CompareItemResult> onItem,
+                              Consumer<String> onOverview,
+                              Consumer<Throwable> onError,
+                              Runnable onDone) {
+        try {
+            List<String> uniq = List.copyOf(new LinkedHashSet<>(slugs));
+            if (uniq.size() < 2) {
+                onError.accept(new IllegalArgumentException("请至少选择 2 个不同的天体"));
+                return;
+            }
+
+            List<CompletableFuture<CompareItemResult>> futures = uniq.stream()
+                    .map(slug -> CompletableFuture.supplyAsync(() -> safeExplain(slug, userId), aiCompareExecutor)
+                            .orTimeout(itemTimeoutSeconds, TimeUnit.SECONDS)
+                            .exceptionally(e -> CompareItemResult.failed(slug, "讲解生成超时,请稍后重试"))
+                            .thenApply(item -> {
+                                onItem.accept(item);
+                                return item;
+                            }))
+                    .toList();
+            // 每个 future 已被上面的 exceptionally 兜底,join 不会再抛异常；此时 onItem 均已回调过
+            List<CompareItemResult> items = futures.stream().map(CompletableFuture::join).toList();
+
+            String overview = buildOverview(items)
+                    .orTimeout(overviewTimeoutSeconds, TimeUnit.SECONDS)
+                    .exceptionally(e -> null)
+                    .join();
+            onOverview.accept(overview);
+            onDone.run();
+        } catch (Exception e) {
+            onError.accept(e);
         }
-
-        List<CompletableFuture<CompareItemResult>> futures = uniq.stream()
-                .map(slug -> CompletableFuture.supplyAsync(() -> safeExplain(slug, userId), aiCompareExecutor)
-                        .orTimeout(itemTimeoutSeconds, TimeUnit.SECONDS)
-                        .exceptionally(e -> CompareItemResult.failed(slug, "讲解生成超时,请稍后重试")))
-                .toList();
-        // 每个 future 已被上面的 exceptionally 兜底,join 不会再抛异常
-        List<CompareItemResult> items = futures.stream().map(CompletableFuture::join).toList();
-
-        String overview = buildOverview(items)
-                .orTimeout(overviewTimeoutSeconds, TimeUnit.SECONDS)
-                .exceptionally(e -> null)
-                .join();
-        return new CompareResult(items, overview);
     }
 
     /** 单个天体的讲解生成,任何异常都在此兜底降级为该项失败,绝不向上抛。 */

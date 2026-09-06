@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { api, ApiUnavailableError, ApiError } from '../api'
 import { pick } from '../i18n'
 import { useFavorites } from '../composables/useFavorites'
+import { dedupeSourcesBySlug } from '../utils/sources'
 import OfflineNotice from '../components/OfflineNotice.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 
@@ -34,7 +35,7 @@ async function loadExplain() {
 	try {
 		const data = await api.explain(route.params.slug)
 		explanation.value = data.answer
-		explainSources.value = data.sources || []
+		explainSources.value = dedupeSourcesBySlug(data.sources)
 		explainStatus.value = 'ready'
 	} catch (e) {
 		explainError.value =
