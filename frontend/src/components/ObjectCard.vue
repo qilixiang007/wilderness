@@ -26,9 +26,13 @@ function onToggleCompare() {
 				class="compare-badge"
 				:class="{ 'compare-badge-active': selected }"
 				:disabled="!selected && count >= COMPARE_MAX"
+				:title="selected ? $t('compare.remove') : $t('compare.add')"
 				:aria-label="selected ? $t('compare.remove') : $t('compare.add')"
 				@click.stop="onToggleCompare"
-			>{{ selected ? '✓' : '+' }}</button>
+			>
+				<span class="compare-badge-icon">{{ selected ? '✓' : '+' }}</span>
+				<span class="compare-badge-label">{{ selected ? $t('compare.selectedBadge') : $t('compare.addBadge') }}</span>
+			</button>
 		</div>
 		<div class="object-copy">
 			<h4>{{ pick(object.zhName, object.enName) }}</h4>
@@ -52,20 +56,26 @@ function onToggleCompare() {
 	position: absolute;
 	top: 8px;
 	right: 8px;
-	width: 30px;
-	height: 30px;
+	height: 28px;
+	padding: 0 10px 0 8px;
 	border-radius: 999px;
 	border: 1px solid rgba(255, 255, 255, 0.55);
-	background: rgba(10, 12, 20, 0.55);
+	background: rgba(10, 12, 20, 0.6);
 	color: #fff;
 	cursor: pointer;
-	font-size: 0.95rem;
+	font-size: 0.78rem;
+	font-weight: 600;
 	line-height: 1;
+	white-space: nowrap;
 	display: flex;
 	align-items: center;
-	justify-content: center;
+	gap: 4px;
 	transition: background 0.2s ease, color 0.2s ease;
 	backdrop-filter: blur(2px);
+}
+
+.compare-badge-icon {
+	font-size: 0.9rem;
 }
 
 .compare-badge:hover {

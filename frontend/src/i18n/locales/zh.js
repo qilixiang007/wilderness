@@ -52,6 +52,7 @@ export default {
 		noObjects: '该分类下暂无天体。'
 	},
 	object: {
+		kicker: '星表档案',
 		file: '天体详情',
 		keyFacts: '关键数据',
 		sourceLabel: '数据来源',
@@ -67,9 +68,18 @@ export default {
 		objects: '天体列表'
 	},
 	knowledge: {
-		kicker: '个人知识库',
+		kicker: '账号专属资料',
 		title: '知识库',
 		intro: '上传文档（Word/PDF/Excel/txt），系统会自动切块向量化后作为你的个人知识库参与 AI 问答。',
+		flowKicker: '怎么工作的',
+		flowTitle: '从你提问，到 AI 回答，中间发生了什么？',
+		flowSteps: [
+			{ title: '你提问', desc: '比如你在"AI 问答"里打字问"土星环是什么做的"，回车发出去，剩下的都交给系统。' },
+			{ title: '找资料', desc: '系统不是简单地在文章里搜"土星环"这三个字——它同时用关键词匹配和语义搜索两条路子去找，后者能看懂"意思"，哪怕资料里写的是换了种说法的句子，也能被捞出来。' },
+			{ title: '挑重点', desc: '这一步通常能搜到十几段候选内容，系统会按相关度打分排序，只留下最靠谱的三五段——段落太多大模型读不过来，太少又怕漏掉关键信息，这一步就是在找平衡。' },
+			{ title: 'AI 现学现答', desc: '把你的问题和挑出来的那几段资料一起交给大模型，让它"照着资料说话"而不是凭记忆瞎编，写完还会在下面标出用了哪几篇资料，你可以点进去核对是不是真的这么回事。' }
+		],
+		flowNote: '你上传到这里的文件，也会经过同样的切块、检索流程被处理、存起来，之后你问问题时，它才有可能被翻出来用上。',
 		uploading: '入库中…',
 		uploadFile: '上传文件到知识库',
 		uploaded: '已入库「{fileName}」，{chunkCount} 个分块',
@@ -85,6 +95,7 @@ export default {
 		kicker: 'AI 问答 · 知识库 RAG',
 		title: '向旷野提问',
 		intro: '基于站内天文知识库的 AI 问答。混合检索（关键词 + 语义）定位资料，回答会标注资料来源。',
+		sourceSegment: '{title} · 第{index}段',
 		tryAsking: '试试这样问：',
 		suggestions: ['太阳系里最大的行星是哪颗？', '为什么星星会眨眼？', '什么是暗物质？'],
 		webSearch: '联网检索',
@@ -171,7 +182,11 @@ export default {
 	compare: {
 		title: '多天体对比',
 		add: '加入对比',
+		addBadge: '对比',
 		remove: '移出对比',
+		selectedBadge: '已选',
+		hint: '点击卡片右上角"+ 对比"即可加入对比，最多可选 {max} 个天体。',
+		hintDismiss: '关闭提示',
 		selectedCount: '已选 {n}/{max} 个',
 		start: '开始对比',
 		clear: '清空',

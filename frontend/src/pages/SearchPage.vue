@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { api, ApiUnavailableError } from '../api'
 import ObjectCard from '../components/ObjectCard.vue'
+import CompareHint from '../components/CompareHint.vue'
 import { useCompare } from '../composables/useCompare'
 
 const { isSelected } = useCompare()
@@ -76,15 +77,18 @@ watch(
 				<p v-if="results.length === 0" class="detail-missing">
 					{{ $t('search.noResults', { q: q }) }}
 				</p>
-				<div v-else class="card-grid object-card-grid">
-					<ObjectCard
-						v-for="object in results"
-						:key="object.slug"
-						:object="object"
-						selectable
-						:selected="isSelected(object.slug)"
-					/>
-				</div>
+				<template v-else>
+					<CompareHint />
+					<div class="card-grid object-card-grid">
+						<ObjectCard
+							v-for="object in results"
+							:key="object.slug"
+							:object="object"
+							selectable
+							:selected="isSelected(object.slug)"
+						/>
+					</div>
+				</template>
 			</template>
 		</section>
 	</main>

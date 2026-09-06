@@ -6,6 +6,7 @@ import { celestialCategories } from '../data/celestial'
 import { pick } from '../i18n'
 import OfflineNotice from '../components/OfflineNotice.vue'
 import ObjectCard from '../components/ObjectCard.vue'
+import CompareHint from '../components/CompareHint.vue'
 import { useCompare } from '../composables/useCompare'
 
 const { isSelected } = useCompare()
@@ -76,6 +77,7 @@ watch(() => route.params.slug, load, { immediate: true })
 					<div class="section-heading compact object-heading">
 						<h4>{{ $t('object.objects') }}</h4>
 					</div>
+					<CompareHint v-if="category.objects && category.objects.length" />
 					<div v-if="category.objects && category.objects.length" class="card-grid object-card-grid">
 						<ObjectCard
 							v-for="object in category.objects"

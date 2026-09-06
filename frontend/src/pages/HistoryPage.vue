@@ -21,6 +21,19 @@ const error = ref('')
 const expandedId = ref(null)
 const deletingId = ref(null)
 
+// 同一篇资料被检索出多个片段时，标题会完全相同——加个"第几段"后缀区分开
+function knowledgeSources(item) {
+	return (item.sources || []).filter((x) => x.type !== 'web')
+}
+
+function sourceLabel(s, item) {
+	const dupes = knowledgeSources(item).filter((x) => x.slug === s.slug)
+	if (dupes.length <= 1) return s.title
+	// 优先用后端给的真实块序号（原文档里的第几块）；老记录没有这个字段时，退回按出现顺序编号
+	const index = s.chunkIndex != null ? s.chunkIndex + 1 : dupes.indexOf(s) + 1
+	return t('ask.sourceSegment', { title: s.title, index })
+}
+
 const hasMore = computed(() => items.value.length < totalElements.value)
 
 async function load(reset = false) {
@@ -158,13 +171,13 @@ onMounted(() => load(true))
 								{{ s.title }}<span class="source-type">{{ s.type }}</span>
 							</a>
 							<RouterLink
-								v-for="(s, si) in item.sources.filter((x) => x.type !== 'web')"
+								v-for="(s, si) in knowledgeSources(item)"
 								:key="si"
 								:to="`/object/${s.slug}`"
 								class="source-chip"
 								:title="s.excerpt"
 							>
-								{{ s.title }}<span class="source-type">{{ s.type }}</span>
+								{{ sourceLabel(s, item) }}<span class="source-type">{{ s.type }}</span>
 							</RouterLink>
 						</div>
 

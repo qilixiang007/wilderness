@@ -82,7 +82,8 @@ public class CelestialSearchTool {
                 String slug = seg.metadata().getString("slug");
                 if (zhName != null && slug != null && !hitBySlug.containsKey(slug)) {
                     hitBySlug.put(slug, zhName);
-                    sources.add(new AiSource(zhName, slug, seg.metadata().getString("type"), abbreviate(seg.text())));
+                    sources.add(new AiSource(zhName, slug, seg.metadata().getString("type"), abbreviate(seg.text()),
+                            intOrNull(seg.metadata().getString("chunk_index"))));
                 }
                 sb.append('【').append(zhName == null ? slug : zhName).append("】\n")
                         .append(abbreviate(seg.text())).append("\n\n");
@@ -108,5 +109,17 @@ public class CelestialSearchTool {
             return null;
         }
         return text.length() > EXCERPT_LEN ? text.substring(0, EXCERPT_LEN) + "…" : text;
+    }
+
+    /** ES 的 chunk_index 经 Metadata 转一圈会变成字符串,这里转回数字;取不到就返回 null。 */
+    private Integer intOrNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

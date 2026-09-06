@@ -4,9 +4,22 @@ import { useI18n } from 'vue-i18n'
 import { openChatStream } from '../api'
 import MarkdownView from '../components/MarkdownView.vue'
 
-const { tm } = useI18n()
+const { t, tm } = useI18n()
 
 const suggestions = computed(() => tm('ask.suggestions'))
+
+// 同一篇资料被检索出多个片段时，标题会完全相同——加个"第几段"后缀区分开
+function knowledgeSources(msg) {
+	return (msg.sources || []).filter((x) => x.type !== 'web')
+}
+
+function sourceLabel(s, msg) {
+	const dupes = knowledgeSources(msg).filter((x) => x.slug === s.slug)
+	if (dupes.length <= 1) return s.title
+	// 优先用后端给的真实块序号（原文档里的第几块）；老记录没有这个字段时，退回按出现顺序编号
+	const index = s.chunkIndex != null ? s.chunkIndex + 1 : dupes.indexOf(s) + 1
+	return t('ask.sourceSegment', { title: s.title, index })
+}
 
 const messages = ref([]) // { role: 'user' | 'assistant', content, sources }
 const input = ref('')
@@ -99,13 +112,13 @@ function send() {
 							{{ s.title }}<span class="source-type">{{ s.type }}</span>
 						</a>
 						<RouterLink
-							v-for="(s, si) in msg.sources.filter((x) => x.type !== 'web')"
+							v-for="(s, si) in knowledgeSources(msg)"
 							:key="si"
 							:to="`/object/${s.slug}`"
 							class="source-chip"
 							:title="s.excerpt"
 						>
-							{{ s.title }}<span class="source-type">{{ s.type }}</span>
+							{{ sourceLabel(s, msg) }}<span class="source-type">{{ s.type }}</span>
 						</RouterLink>
 					</div>
 				</div>

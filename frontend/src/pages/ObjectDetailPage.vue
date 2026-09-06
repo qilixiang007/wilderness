@@ -97,7 +97,7 @@ watch(() => route.params.slug, load, { immediate: true })
 	<main>
 		<section class="section-block">
 			<div class="section-heading">
-				<p class="eyebrow">{{ $t('object.file') }}</p>
+				<p class="eyebrow">{{ $t('object.kicker') }}</p>
 				<h3>{{ $t('object.file') }}</h3>
 			</div>
 

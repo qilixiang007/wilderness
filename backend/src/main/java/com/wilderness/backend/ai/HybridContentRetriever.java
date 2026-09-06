@@ -121,7 +121,8 @@ public class HybridContentRetriever implements ContentRetriever {
                                     .put("type", str(d.source().get("type")))
                                     .put("zh_name", str(d.source().get("zh_name")))
                                     .put("en_name", str(d.source().get("en_name")))
-                                    .put("file_name", str(d.source().get("file_name"))))))
+                                    .put("file_name", str(d.source().get("file_name")))
+                                    .put("chunk_index", str(d.source().get("chunk_index"))))))
                     .toList();
         } catch (Exception e) {
             throw new IllegalStateException("混合检索失败:" + e.getMessage(), e);
@@ -153,7 +154,7 @@ public class HybridContentRetriever implements ContentRetriever {
                                         .fields("content", "zh_name")))
                                 .filter(userFilter(userId))))
                         .size(size)
-                        .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name"))),
+                        .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name", "chunk_index"))),
                 Map.class);
         return resp.hits().hits();
     }
@@ -169,7 +170,7 @@ public class HybridContentRetriever implements ContentRetriever {
                         .knn(k -> k.field("content_vector").queryVector(queryVector).k(size).numCandidates(size * 10)
                                 .filter(userFilter(userId)))
                         .size(size)
-                        .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name"))),
+                        .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name", "chunk_index"))),
                 Map.class);
         return resp.hits().hits();
     }

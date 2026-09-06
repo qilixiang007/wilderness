@@ -146,7 +146,7 @@ public class RagService {
                                     .must(m -> m.term(t -> t.field("slug").value(slug)))
                                     .filter(userFilter(userId))))
                             .size(50)
-                            .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name"))),
+                            .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name", "chunk_index"))),
                     Map.class);
 
             List<Map> docs = new ArrayList<>();
@@ -170,7 +170,8 @@ public class RagService {
             String answer = assistant.explain(zhName, enName, sourcesText);
             List<AiSource> sources = docs.stream()
                     .map(d -> new AiSource(str(d.get("zh_name")), str(d.get("slug")),
-                            str(d.get("type")), abbreviate(str(d.get("content")))))
+                            str(d.get("type")), abbreviate(str(d.get("content"))),
+                            (Integer) d.get("chunk_index")))
                     .toList();
             ExplainResponse response = new ExplainResponse(answer, sources);
             Map<String, Object> outputs = new LinkedHashMap<>();
@@ -222,8 +223,21 @@ public class RagService {
                     seg.metadata().getString("zh_name"),
                     seg.metadata().getString("slug"),
                     seg.metadata().getString("type"),
-                    abbreviate(seg.text()));
+                    abbreviate(seg.text()),
+                    intOrNull(seg.metadata().getString("chunk_index")));
         }).toList();
+    }
+
+    /** ES 里的 chunk_index 经 Metadata 转一圈会变成字符串;联网结果等没有该字段,原样返回 null。 */
+    private Integer intOrNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private String abbreviate(String s) {

@@ -52,6 +52,7 @@ export default {
 		noObjects: 'No objects in this category yet.'
 	},
 	object: {
+		kicker: 'CELESTIAL ARCHIVE',
 		file: 'Object file',
 		keyFacts: 'Key facts',
 		sourceLabel: 'Data source',
@@ -67,9 +68,18 @@ export default {
 		objects: 'Objects'
 	},
 	knowledge: {
-		kicker: 'PERSONAL KNOWLEDGE BASE',
+		kicker: 'YOUR ACCOUNT FILES',
 		title: 'Knowledge Base',
 		intro: 'Upload documents (Word / PDF / Excel / txt) and they are chunked and vectorized into your personal knowledge base for AI Q&A.',
+		flowKicker: 'HOW IT WORKS',
+		flowTitle: 'From your question to an AI answer — what happens in between?',
+		flowSteps: [
+			{ title: 'You ask', desc: 'Say you type "what are Saturn\'s rings made of?" into "Ask AI" and hit enter. From here it\'s all on the system.' },
+			{ title: 'It goes hunting', desc: 'It doesn\'t just grep the text for the word "rings" — it runs a keyword search and a meaning-based search side by side, so a passage worded completely differently but talking about the same thing still gets pulled in.' },
+			{ title: 'It narrows it down', desc: 'That first pass usually turns up a dozen or so candidate passages. They get scored by relevance and only the best three to five make the cut — too many and the model can\'t digest them, too few and it might miss something important.' },
+			{ title: 'The model writes an answer', desc: 'Your question and those handful of passages get handed to the AI model, which is told to answer from what\'s in front of it instead of guessing from memory — and the sources it actually used get listed underneath so you can go check them yourself.' }
+		],
+		flowNote: 'Files you upload here go through that same chunk-and-search pipeline before they\'re stored — that\'s what makes them findable later when you ask a question.',
 		uploading: 'Uploading…',
 		uploadFile: 'Upload file',
 		uploaded: 'Ingested "{fileName}" ({chunkCount} chunks)',
@@ -85,6 +95,7 @@ export default {
 		kicker: 'AI ASSISTANT · RAG',
 		title: 'Ask the wilderness',
 		intro: 'Ask about astronomy. Our assistant grounds its answers in the in-house knowledge base via hybrid retrieval, with cited sources.',
+		sourceSegment: '{title} · part {index}',
 		tryAsking: 'Try asking:',
 		suggestions: ['Which is the largest planet in the solar system?', 'Why do stars twinkle?', 'What is dark matter?'],
 		webSearch: 'Web search',
@@ -171,7 +182,11 @@ export default {
 	compare: {
 		title: 'Compare objects',
 		add: 'Add to compare',
+		addBadge: 'Compare',
 		remove: 'Remove from compare',
+		selectedBadge: 'Selected',
+		hint: 'Tap "+ Compare" on a card to add it — pick up to {max} objects.',
+		hintDismiss: 'Dismiss hint',
 		selectedCount: '{n}/{max} selected',
 		start: 'Start comparing',
 		clear: 'Clear',

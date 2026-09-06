@@ -7,8 +7,11 @@ import { useI18n } from 'vue-i18n'
 import { api, ApiUnavailableError } from '../api'
 import { useAuth } from '../composables/useAuth'
 
-const { t } = useI18n()
+const { t, tm } = useI18n()
 const { isLoggedIn } = useAuth()
+
+// 知识库工作原理科普：query → 检索 → AI 作答，给非专业用户看的简化流程
+const flowSteps = tm('knowledge.flowSteps')
 
 // 文件上传入库
 const uploading = ref(false)
@@ -73,6 +76,23 @@ watch(isLoggedIn, (v) => {
 
 <template>
 	<main>
+		<section class="section-block flow-card">
+			<div class="section-heading compact">
+				<p class="eyebrow">{{ $t('knowledge.flowKicker') }}</p>
+				<h4>{{ $t('knowledge.flowTitle') }}</h4>
+			</div>
+			<ol class="flow-steps">
+				<li v-for="(step, i) in flowSteps" :key="i" class="flow-step">
+					<span class="flow-step-num">{{ i + 1 }}</span>
+					<div class="flow-step-body">
+						<p class="flow-step-title">{{ step.title }}</p>
+						<p class="flow-step-desc">{{ step.desc }}</p>
+					</div>
+				</li>
+			</ol>
+			<p class="flow-note">{{ $t('knowledge.flowNote') }}</p>
+		</section>
+
 		<section class="section-block knowledge-section">
 			<div class="section-heading">
 				<p class="eyebrow">{{ $t('knowledge.kicker') }}</p>
@@ -115,8 +135,68 @@ watch(isLoggedIn, (v) => {
 </template>
 
 <style scoped>
-.knowledge-section {
-	max-width: 46rem;
+.flow-steps {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 1.1rem 1.6rem;
+}
+
+@media (max-width: 1100px) {
+	.flow-steps {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+.flow-step {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.7rem;
+}
+
+.flow-step-num {
+	flex-shrink: 0;
+	width: 1.6rem;
+	height: 1.6rem;
+	border-radius: 50%;
+	background: var(--accent);
+	color: var(--accent-contrast);
+	font-size: 0.8rem;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.flow-step-title {
+	margin: 0 0 0.2rem;
+	font-weight: 600;
+	color: var(--text);
+	font-size: 0.92rem;
+}
+
+.flow-step-desc {
+	margin: 0;
+	font-size: 0.82rem;
+	line-height: 1.65;
+	color: var(--muted);
+}
+
+.flow-note {
+	margin: 1.2rem 0 0;
+	padding-top: 0.9rem;
+	border-top: 1px solid var(--card-border);
+	font-size: 0.82rem;
+	line-height: 1.6;
+	color: var(--muted);
+}
+
+@media (max-width: 640px) {
+	.flow-steps {
+		grid-template-columns: 1fr;
+	}
 }
 
 .upload-bar {

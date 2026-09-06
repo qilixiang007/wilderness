@@ -441,6 +441,13 @@ button {
 		radial-gradient(circle at 50% 38%, var(--panel-glow), transparent 44%),
 		linear-gradient(180deg, rgba(11, 17, 38, 0.92), rgba(7, 11, 26, 0.97));
 	border: 1px solid var(--card-border);
+	/* 这块星图卡片始终是深色夜空底，与页面主题无关；
+	   minimal/macaron 等浅色主题的 --star/--line/--muted/--text 是按浅色背景配的暗色，
+	   直接用会在深色底上变成"深色压深色"，必须在这里覆盖成固定的浅色版本。 */
+	--line: rgba(196, 216, 255, 0.55);
+	--star: #eef3ff;
+	--muted: rgba(238, 243, 255, 0.68);
+	color: #f4efe2;
 }
 
 .constellation {
