@@ -89,6 +89,37 @@ export function openChatStream(question, { webEnabled = false, onSources, onDelt
 	return es
 }
 
+/**
+ * 打开多天体对比的 SSE 流式连接:每个天体讲解一完成就推 item 事件(顺序=完成顺序，
+ * 不是请求顺序),全部完成后再推一次 overview 事件。
+ * - onItem(item):单个天体的讲解结果(CompareItemResult,error 非空即该项降级)
+ * - onOverview(text):综合总结,失败为 null
+ * - onEnd():流结束(不管是正常结束还是异常中断——原生 EventSource 无法区分两者，
+ *   调用方需结合是否已收到 onOverview 来判断是否是异常中断)
+ */
+export function openCompareStream(slugs, { onItem, onOverview, onEnd }) {
+	const es = new EventSource(`${BASE}/api/ai/compare/stream?slugs=${encodeURIComponent(slugs.join(','))}`)
+	es.addEventListener('item', (e) => {
+		try {
+			onItem(JSON.parse(e.data))
+		} catch {
+			/* 忽略解析失败的条目 */
+		}
+	})
+	es.addEventListener('overview', (e) => {
+		try {
+			onOverview(JSON.parse(e.data).overview)
+		} catch {
+			onOverview(null)
+		}
+	})
+	es.onerror = () => {
+		es.close()
+		onEnd?.()
+	}
+	return es
+}
+
 export const api = {
 	getCategories: () => request('/api/categories'),
 	getCategory: (slug) => request(`/api/categories/${encodeURIComponent(slug)}`),
@@ -103,14 +134,6 @@ export const api = {
 		}),
 	// AI 生成类接口耗时远超默认 8s（LLM 检索+成文通常 10~30s），沿用上传文件的 60s 超时，避免被 AbortController 提前掐断
 	explain: (slug) => request(`/api/ai/explain/${encodeURIComponent(slug)}`, { timeout: 60000 }),
-	// 多天体对比：并行生成各天体讲解 + 综合总结，两阶段各自最迟 60s，留够余量
-	compare: (slugs) =>
-		request('/api/ai/compare', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ slugs }),
-			timeout: 180000
-		}),
 	// 天体生成 Agent：描述 → 检索真实天体作参考 → 生成虚拟天体的介绍与渲染参数
 	generateCelestial: (description) =>
 		request('/api/ai/generate-celestial', {

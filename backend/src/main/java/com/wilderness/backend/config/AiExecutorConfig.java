@@ -17,7 +17,10 @@ public class AiExecutorConfig {
     @Bean
     public ThreadPoolTaskExecutor aiCompareExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
+        // core=max=4：Java 线程池的调度规则是 core 用满后新任务优先进队列排队，
+        // 只有队列也满了才会继续开线程到 max——core 若小于前端 COMPARE_MAX(4)，
+        // 4 个天体同时对比时后两个会排队等前两个的线程释放，实际上没有真正并行。
+        executor.setCorePoolSize(4);
         executor.setMaxPoolSize(4);
         executor.setQueueCapacity(64);
         executor.setThreadNamePrefix("ai-cmp-");

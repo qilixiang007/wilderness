@@ -8,8 +8,6 @@ import com.wilderness.backend.auth.AuthContext;
 import com.wilderness.backend.common.ApiResponse;
 import com.wilderness.backend.dto.ChatRequest;
 import com.wilderness.backend.dto.ChatResponse;
-import com.wilderness.backend.dto.CompareRequest;
-import com.wilderness.backend.dto.CompareResult;
 import com.wilderness.backend.dto.ExplainResponse;
 import com.wilderness.backend.dto.GenerateCelestialRequest;
 import com.wilderness.backend.dto.GenerationResult;
@@ -26,6 +24,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -87,11 +88,30 @@ public class AiController {
         return ApiResponse.ok(ragService.explain(slug, AuthContext.currentUserId()));
     }
 
-    /** 多天体对比:并行生成各天体讲解(单路失败不影响其他),再综合成一段跨天体对比短文。 */
-    @PostMapping("/compare")
-    public ApiResponse<CompareResult> compare(@Valid @RequestBody CompareRequest request) {
+    /**
+     * 多天体对比(SSE):并行生成各天体讲解,每篇一完成就推 item 事件(单路失败不影响其他),
+     * 全部完成后再推 overview 事件(综合失败则 overview 为 null)。
+     */
+    @GetMapping(value = "/compare/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter compareStream(@RequestParam("slugs") String slugsParam) {
+        List<String> slugs = Arrays.stream(slugsParam.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
         Long userId = AuthContext.currentUserId();
-        return ApiResponse.ok(compareService.compare(request.slugs(), userId));
+        SseEmitter emitter = new SseEmitter(0L);
+        try {
+            streamExecutor.execute(() -> compareService.compareStream(
+                    slugs,
+                    userId,
+                    item -> safeSend(emitter, "item", toJson(item)),
+                    overview -> safeSend(emitter, "overview", toJson(Collections.singletonMap("overview", overview))),
+                    emitter::completeWithError,
+                    emitter::complete));
+        } catch (RejectedExecutionException e) {
+            emitter.completeWithError(e);
+        }
+        return emitter;
     }
 
     /** 天体生成 Agent:描述/参数 → 检索真实天体作参考 → 生成虚拟天体的介绍与渲染参数。半公开,未登录可生成。 */
