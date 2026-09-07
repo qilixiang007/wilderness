@@ -1,10 +1,12 @@
 <script setup>
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { openChatStream } from '../api'
+import { api, openChatStream } from '../api'
 import MarkdownView from '../components/MarkdownView.vue'
+import { useAuth } from '../composables/useAuth'
 
 const { t, tm } = useI18n()
+const { isLoggedIn } = useAuth()
 
 const suggestions = computed(() => tm('ask.suggestions'))
 
@@ -20,6 +22,45 @@ function sourceLabel(s, msg) {
 	const index = s.chunkIndex != null ? s.chunkIndex + 1 : dupes.indexOf(s) + 1
 	return t('ask.sourceSegment', { title: s.title, index })
 }
+
+// —— 最近历史预览：仅登录用户可见，默认 3 条，"查看更多"按 3 条递增 ——
+const RECENT_STEP = 3
+const recentHistory = ref([])
+const recentTotal = ref(0)
+const recentSize = ref(RECENT_STEP)
+const recentLoading = ref(false)
+const recentExpandedId = ref(null)
+
+const recentHasMore = computed(() => recentHistory.value.length < recentTotal.value)
+
+async function loadRecentHistory() {
+	if (!isLoggedIn.value) return
+	recentLoading.value = true
+	try {
+		const res = await api.getHistory(0, recentSize.value, '')
+		recentHistory.value = res.items
+		recentTotal.value = res.totalElements
+	} catch {
+		// 静默失败：这是锦上添花的预览区块，出错就不显示，不打扰主问答流程
+		recentHistory.value = []
+		recentTotal.value = 0
+	} finally {
+		recentLoading.value = false
+	}
+}
+
+function loadMoreRecent() {
+	recentSize.value += RECENT_STEP
+	loadRecentHistory()
+}
+
+function toggleRecent(item) {
+	recentExpandedId.value = recentExpandedId.value === item.id ? null : item.id
+}
+
+onMounted(() => {
+	loadRecentHistory()
+})
 
 const messages = ref([]) // { role: 'user' | 'assistant', content, sources }
 const input = ref('')
@@ -72,6 +113,52 @@ function send() {
 			</div>
 
 			<div v-if="messages.length === 0" class="ask-empty">
+				<div v-if="isLoggedIn && recentHistory.length" class="ask-recent">
+					<p class="ask-recent-label">{{ $t('ask.recentHistory') }}</p>
+					<div class="history-item" v-for="item in recentHistory" :key="item.id">
+						<button class="history-item-head" type="button" @click="toggleRecent(item)">
+							<span class="history-question">{{ item.question }}</span>
+							<span class="history-time">{{ new Date(item.createdAt).toLocaleDateString() }}</span>
+						</button>
+						<div v-if="recentExpandedId === item.id" class="history-item-body">
+							<MarkdownView :content="item.answer" />
+							<div v-if="item.sources && item.sources.length" class="chat-sources">
+								<span class="sources-label">{{ $t('common.sources') }}</span>
+								<a
+									v-for="(s, si) in item.sources.filter((x) => x.type === 'web')"
+									:key="si"
+									:href="s.slug"
+									target="_blank"
+									rel="noopener"
+									class="source-chip"
+									:title="s.excerpt"
+								>
+									{{ s.title }}<span class="source-type">{{ s.type }}</span>
+								</a>
+								<RouterLink
+									v-for="(s, si) in knowledgeSources(item)"
+									:key="si"
+									:to="`/object/${s.slug}`"
+									class="source-chip"
+									:title="s.excerpt"
+								>
+									{{ sourceLabel(s, item) }}<span class="source-type">{{ s.type }}</span>
+								</RouterLink>
+							</div>
+						</div>
+					</div>
+					<div v-if="recentHasMore" class="history-more">
+						<button
+							class="secondary-button"
+							type="button"
+							:disabled="recentLoading"
+							@click="loadMoreRecent"
+						>
+							{{ recentLoading ? $t('common.loading') : $t('ask.viewMoreHistory') }}
+						</button>
+					</div>
+				</div>
+
 				<p>{{ $t('ask.tryAsking') }}</p>
 				<div class="ask-suggestions">
 					<button
@@ -163,6 +250,71 @@ function send() {
 .ask-empty {
 	margin: 1.5rem 0;
 	color: var(--muted);
+}
+
+.ask-recent {
+	margin-bottom: 1.25rem;
+}
+
+.ask-recent-label {
+	font-family: var(--font-display);
+	font-size: 0.85rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--muted);
+	margin: 0 0 0.5rem;
+}
+
+.history-item {
+	border: 1px solid var(--card-border);
+	border-radius: 12px;
+	background: var(--card);
+	margin-bottom: 0.6rem;
+	overflow: hidden;
+}
+
+.history-item-head {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	width: 100%;
+	padding: 0.7rem 0.95rem;
+	border: none;
+	background: none;
+	color: var(--text);
+	font: inherit;
+	font-size: 0.92rem;
+	text-align: left;
+	cursor: pointer;
+}
+
+.history-item-head:hover {
+	background: var(--panel-glow);
+}
+
+.history-question {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.history-time {
+	flex-shrink: 0;
+	font-size: 0.78rem;
+	color: var(--muted);
+}
+
+.history-item-body {
+	padding: 0.4rem 0.95rem 0.95rem;
+	border-top: 1px solid var(--card-border);
+}
+
+.history-more {
+	display: flex;
+	justify-content: center;
+	margin-top: 1rem;
 }
 
 .ask-suggestions {

@@ -3,6 +3,8 @@
 // 接收后端 LLM 结构化输出的 RenderSpec 参数，按类别绘制恒星/行星/卫星/星系/星云/彗星。
 // 容错：LLM 可能缺字段/给非法值，所有字段合并默认值 + 数值 clamp + 颜色校验。
 import { computed } from 'vue'
+import { validHex, shade, lighten } from '../utils/colorUtils'
+import { MAX_SATELLITES } from '../utils/renderRepair'
 
 const props = defineProps({
 	render: { type: Object, default: null },
@@ -38,24 +40,8 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const safeColor = (v, fallback) =>
 	typeof v === 'string' && /^#([0-9a-fA-F]{3}){1,2}$/.test(v.trim()) ? v : fallback
 
-// 颜色工具：主色缺辅色/点缀色时从主色推导，避免「紫色主体 + 金色默认辅色」的割裂观感
-const validHex = (v) => typeof v === 'string' && /^#([0-9a-fA-F]{3}){1,2}$/.test(v.trim())
-const hexToRgb = (hex) => {
-	const h = hex.trim().replace('#', '')
-	const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
-	const n = parseInt(full, 16)
-	return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-}
-const toHex = (n) => Math.round(n).toString(16).padStart(2, '0')
-// 两色加权混合：w=0 返回 a，w=1 返回 b
-const mixHex = (a, b, w) => {
-	const [r1, g1, b1] = hexToRgb(a)
-	const [r2, g2, b2] = hexToRgb(b)
-	const k = 1 - w
-	return `#${toHex(r1 * k + r2 * w)}${toHex(g1 * k + g2 * w)}${toHex(b1 * k + b2 * w)}`
-}
-const shade = (hex, w) => mixHex(hex, '#000000', w)
-const lighten = (hex, w) => mixHex(hex, '#ffffff', w)
+// 主色缺辅色/点缀色时从主色推导（shade/lighten 来自共享 colorUtils），
+// 避免「紫色主体 + 金色默认辅色」的割裂观感
 
 // 合并默认值 + clamp + 颜色校验后的有效渲染参数
 // 合并默认值 + clamp 后的有效渲染参数。
@@ -80,7 +66,7 @@ const r = computed(() => {
 	const category = String(src.category || DEFAULTS.category).toLowerCase()
 	out.category = CATEGORIES.includes(category) ? category : DEFAULTS.category
 	const sats = Array.isArray(src.satellites) ? src.satellites : []
-	out.satellites = sats.slice(0, 9).map((s) => {
+	out.satellites = sats.slice(0, MAX_SATELLITES).map((s) => {
 		const color = safeColor(s && s.color, out.accentColor)
 		const size = Number(s && s.size)
 		return { color, size: Number.isFinite(size) ? clamp(size, 0.05, 0.5) : 0.13 }
