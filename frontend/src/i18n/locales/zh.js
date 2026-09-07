@@ -104,6 +104,8 @@ export default {
 		title: '向旷野提问',
 		intro: '基于站内天文知识库的 AI 问答。混合检索（关键词 + 语义）定位资料，回答会标注资料来源。',
 		sourceSegment: '{title} · 第{index}段',
+		recentHistory: '你最近问过：',
+		viewMoreHistory: '查看更多历史',
 		tryAsking: '试试这样问：',
 		suggestions: ['太阳系里最大的行星是哪颗？', '为什么星星会眨眼？', '什么是暗物质？'],
 		webSearch: '联网检索',
@@ -135,6 +137,7 @@ export default {
 		introduction: '科学介绍',
 		sources: '参考的真实天体',
 		imageHint: '图片由参数化渲染生成（配置文生图后升级为 AI 生成图）',
+		satellitesTruncated: '描述中提到了 {n} 颗卫星，受画面展示上限限制，仅渲染前 {max} 颗。',
 		trySamples: '试试这样描述：',
 		samples: [
 			'一个散发蓝色光芒的气态巨行星，质量是木星的 2 倍，有两圈淡金色的行星环',

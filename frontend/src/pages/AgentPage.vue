@@ -164,6 +164,11 @@ function pickColor(c) {
 	colorTouched.value = true
 }
 
+// 只有真正点过色板才显示"已选中"，避免默认色块（未点击）被误认成已生效的选择
+function colorActive(c) {
+	return colorTouched.value && color.value === c
+}
+
 function fillSample(text) {
 	description.value = text
 }
@@ -357,7 +362,7 @@ function backfillForm(res) {
 								v-for="c in macaronColors"
 								:key="c"
 								class="color-swatch"
-								:class="{ active: color === c }"
+								:class="{ active: colorActive(c) }"
 								:style="{ background: c }"
 								type="button"
 								:disabled="status === 'generating'"
@@ -421,6 +426,9 @@ function backfillForm(res) {
 					</div>
 					<p class="visual-caption">
 						{{ $t('agent.imageHint') }}
+					</p>
+					<p v-if="!result.imageUrl && visualRender?.truncatedFrom" class="visual-caption">
+						{{ $t('agent.satellitesTruncated', { n: visualRender.truncatedFrom, max: visualRender.satellites.length }) }}
 					</p>
 				</div>
 

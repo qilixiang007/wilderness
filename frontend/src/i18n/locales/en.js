@@ -104,6 +104,8 @@ export default {
 		title: 'Ask the wilderness',
 		intro: 'Ask about astronomy. Our assistant grounds its answers in the in-house knowledge base via hybrid retrieval, with cited sources.',
 		sourceSegment: '{title} · part {index}',
+		recentHistory: 'Your recent questions:',
+		viewMoreHistory: 'View more history',
 		tryAsking: 'Try asking:',
 		suggestions: ['Which is the largest planet in the solar system?', 'Why do stars twinkle?', 'What is dark matter?'],
 		webSearch: 'Web search',
@@ -135,6 +137,7 @@ export default {
 		introduction: 'Science introduction',
 		sources: 'Reference objects',
 		imageHint: 'Procedurally rendered from parameters (upgrades to an AI image when an image API is configured)',
+		satellitesTruncated: 'The description mentions {n} moons; only the first {max} are rendered due to the display limit.',
 		trySamples: 'Try describing:',
 		samples: [
 			'A blue-glowing gas giant, 2× the mass of Jupiter, with two pale golden rings',

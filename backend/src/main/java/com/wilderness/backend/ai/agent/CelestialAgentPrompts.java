@@ -33,19 +33,34 @@ public final class CelestialAgentPrompts {
 			  coreSize、brightness、hasRings、bands、satellites 不得省略或留 null（其余字段按类别需要填写）。
 
 			【硬性约束 · 用户输入必须原样照搬，不得改动或忽略】
-			- 颜色：若描述里带 #RRGGBB（如「颜色#8A2BE2」）或颜色词（如「紫色」），
-			  该颜色即 render.primaryColor（描述含 #hex 时直接使用该 hex），
-			  parameters 的 颜色 键写入同一颜色；
+			- 颜色的归属必须严格区分「描述的是天体主体」还是「描述的是卫星」，禁止互相串色：
+			  · 若颜色词/#hex 修饰的是主体本身（如「紫色行星」「颜色#8A2BE2」，未特指卫星），
+			    该颜色即 render.primaryColor（并据此确定 secondaryColor/accentColor），
+			    parameters 的 颜色 键写入同一颜色；
+			  · 若颜色词明确只修饰卫星（如「10 个紫色的卫星」「卫星是紫色的」），该颜色只写入
+			    对应 render.satellites[].color，绝不能带入 render.primaryColor/secondaryColor/accentColor；
+			    此时若描述未单独指定主体颜色，render.primaryColor 按天体类型自行选取一个与卫星颜色不同的
+			    合理颜色，不得因为卫星是紫色就把主体也画成紫色；
+			  · 若描述同时出现多个颜色词（如既有主体色又有卫星色），各自归位，不得混用。
 			- 卫星：若描述提到「N 颗…卫星」（如「3 颗绿色卫星」），render.satellites 必须给出恰好 N 个
 			  对象元素，每颗一个 {"color":"#RRGGBB"}（对象数组，禁止字符串数组），颜色对应该卫星颜色；
-			  parameters 的 卫星 键同步注明（如「卫星：3 颗，绿色」）。
+			  parameters 的 卫星 键同步注明（如「卫星：3 颗，绿色」）。即使 N 较大，也照实给出 N 个，
+			  由前端负责展示层面的裁剪，不要自行减少数量。
 
 			【render 示例（few-shot：照此形状并补全其余字段）】
-			用户描述「紫色行星，带 3 颗绿色卫星」→ render 形如：
+			示例一 · 用户描述「紫色行星，带 3 颗绿色卫星」（颜色词修饰主体）→ render 形如：
 			{"category":"planet","primaryColor":"#8A2BE2","secondaryColor":"#5E1FA0","accentColor":"#C9A0FF",
 			"coreSize":0.55,"brightness":0.7,"hasRings":false,"bands":6,"spots":2,
 			"satellites":[{"color":"#3CB371"},{"color":"#3CB371"},{"color":"#3CB371"}]}
 			（satellites 每颗卫星一个对象，同色也逐个列出；其余字段照常给出非空值。）
+
+			示例二 · 用户描述「该天体有 10 个紫色的卫星」（颜色词只修饰卫星，主体未指定颜色）→ render 形如：
+			{"category":"planet","primaryColor":"#4A7BD9","secondaryColor":"#3557C9","accentColor":"#9FC1F0",
+			"coreSize":0.5,"brightness":0.7,"hasRings":false,"bands":6,"spots":1,
+			"satellites":[{"color":"#8A5BD9"},{"color":"#8A5BD9"},{"color":"#8A5BD9"},{"color":"#8A5BD9"},
+			{"color":"#8A5BD9"},{"color":"#8A5BD9"},{"color":"#8A5BD9"},{"color":"#8A5BD9"},
+			{"color":"#8A5BD9"},{"color":"#8A5BD9"}]}
+			（主体颜色自行选取、与紫色无关；只有 10 颗卫星逐个标为紫色，绝不把紫色套到 primaryColor 上。）
 
 			只输出合法 JSON，不要任何 JSON 之外的文字、不要用代码块包裹、不要调用任何工具。""";
 

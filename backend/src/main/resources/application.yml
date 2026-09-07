@@ -27,6 +27,13 @@ spring:
       port: 6379
       database: 0
       timeout: 2000ms
+  # 仅供 Actuator 健康检查探针使用：业务查询走 ElasticsearchClientConfig 手动构建的客户端
+  # （用 wilderness.ai.elasticsearch.host/port，见下文），但那个 RestClient 只是方法内局部变量，
+  # 没有注册成 Spring Bean；Actuator 探测不到它，会按 spring.elasticsearch.* 的默认值
+  # （localhost:9200）另外自动装配一个探针专用客户端，跟业务实际连的地址不是同一个。
+  # 这里显式指到同一地址，避免探针在容器里连 localhost 而报错。
+  elasticsearch:
+    uris: http://${wilderness.ai.elasticsearch.host}:${wilderness.ai.elasticsearch.port}
   # 邮箱验证码 SMTP（QQ/163/谷歌等按服务商填）；不配则发送接口返回 503
   mail:
     host: ${SMTP_HOST:}
