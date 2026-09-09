@@ -15,6 +15,7 @@ public record GenerationResult(
         RenderSpec render,
         String imageUrl,              // 文生图 URL；未配置/失败为 null → 前端走 SVG
         List<AiSource> sources,       // 检索命中的真实天体，可跳转详情页
-        List<AgentStep> steps         // Agent 执行轨迹
+        List<AgentStep> steps,        // Agent 执行轨迹
+        Long historyId                // 对应的 CelestialGenerationHistory 行 id；未登录/落库失败为 null，前端据此判断能否收藏
 ) {
 }

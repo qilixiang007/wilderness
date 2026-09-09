@@ -6,19 +6,24 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MarkdownView from '../components/MarkdownView.vue'
 import ExplainResultCard from '../components/ExplainResultCard.vue'
+import CelestialVisual from '../components/CelestialVisual.vue'
 import { pick } from '../i18n'
 import { api, ApiUnavailableError } from '../api'
+import { useFavorites } from '../composables/useFavorites'
 
 const { t } = useI18n()
 
 const PAGE_SIZE = 20
 
-const activeTab = ref('conversation') // 'conversation' | 'compare'
+const activeTab = ref('conversation') // 'conversation' | 'compare' | 'generation'
 
 function switchTab(tab) {
 	activeTab.value = tab
 	if (tab === 'compare' && !compareLoaded.value) {
 		loadCompareHistory(true)
+	}
+	if (tab === 'generation' && !generationLoaded.value) {
+		loadGenerationHistory(true)
 	}
 }
 
@@ -199,6 +204,107 @@ const compareGroups = computed(() => {
 	return [...map.entries()].map(([key, list]) => ({ key, label: dayLabel(key), list }))
 })
 
+// —— 天体生成历史（独立于以上两套的状态；列表用摘要字段，展开卡片时才懒加载详情，
+// 详情里带完整链路日志——system/user prompt、检索参考资料原文、模型原始返回、LangSmith run id）——
+const generationRecords = ref([])
+const generationTotalElements = ref(0)
+const generationPage = ref(0)
+const generationLoading = ref(false)
+const generationLoaded = ref(false)
+const generationError = ref('')
+const generationExpandedId = ref(null)
+const generationDeletingId = ref(null)
+const generationDetail = ref({}) // id -> detail DTO（懒加载后缓存，避免重复展开重复请求）
+const generationDetailLoadingId = ref(null)
+const generationLogExpandedId = ref(null) // 详情里"完整链路日志"子折叠区，独立于卡片展开
+// 收藏（自建天体）：函数名和本页 toggleGeneration（展开卡片）撞名，导入时重命名
+const { isFavoriteGeneration, toggleGeneration: toggleGenerationFavorite } = useFavorites()
+const favoritingId = ref(null)
+
+const generationHasMore = computed(() => generationRecords.value.length < generationTotalElements.value)
+
+async function loadGenerationHistory(reset = false) {
+	if (reset) {
+		generationPage.value = 0
+		generationRecords.value = []
+	}
+	generationLoading.value = true
+	generationError.value = ''
+	try {
+		const res = await api.getGenerationHistory(generationPage.value, PAGE_SIZE)
+		if (reset) generationRecords.value = res.items
+		else generationRecords.value = [...generationRecords.value, ...res.items]
+		generationTotalElements.value = res.totalElements
+		generationLoaded.value = true
+	} catch (err) {
+		generationError.value =
+			err instanceof ApiUnavailableError ? t('history.offline') : t('history.loadFailed')
+	} finally {
+		generationLoading.value = false
+	}
+}
+
+function loadMoreGeneration() {
+	generationPage.value += 1
+	loadGenerationHistory()
+}
+
+async function toggleGeneration(record) {
+	if (generationExpandedId.value === record.id) {
+		generationExpandedId.value = null
+		return
+	}
+	generationExpandedId.value = record.id
+	if (generationDetail.value[record.id]) return
+	generationDetailLoadingId.value = record.id
+	try {
+		const detail = await api.getGenerationHistoryDetail(record.id)
+		generationDetail.value = { ...generationDetail.value, [record.id]: detail }
+	} catch {
+		// 静默失败：详情加载不到就只显示卡片头部，不影响列表本身
+	} finally {
+		generationDetailLoadingId.value = null
+	}
+}
+
+function toggleGenerationLog(id) {
+	generationLogExpandedId.value = generationLogExpandedId.value === id ? null : id
+}
+
+async function onToggleFavorite(historyId) {
+	if (favoritingId.value) return
+	favoritingId.value = historyId
+	try {
+		await toggleGenerationFavorite({ historyId })
+	} finally {
+		favoritingId.value = null
+	}
+}
+
+async function removeGeneration(record) {
+	if (generationDeletingId.value) return
+	generationDeletingId.value = record.id
+	try {
+		await api.deleteGenerationHistory(record.id)
+		generationRecords.value = generationRecords.value.filter((r) => r.id !== record.id)
+		generationTotalElements.value = Math.max(0, generationTotalElements.value - 1)
+	} catch {
+		generationError.value = t('history.deleteFailed')
+	} finally {
+		generationDeletingId.value = null
+	}
+}
+
+const generationGroups = computed(() => {
+	const map = new Map()
+	for (const record of generationRecords.value) {
+		const key = dayKey(record.createdAt)
+		if (!map.has(key)) map.set(key, [])
+		map.get(key).push(record)
+	}
+	return [...map.entries()].map(([key, list]) => ({ key, label: dayLabel(key), list }))
+})
+
 onMounted(() => load(true))
 </script>
 
@@ -208,7 +314,15 @@ onMounted(() => load(true))
 			<div class="section-heading">
 				<p class="eyebrow">{{ $t('history.kicker') }}</p>
 				<h3>{{ $t('history.title') }}</h3>
-				<p>{{ activeTab === 'conversation' ? $t('history.intro') : $t('history.compareIntro') }}</p>
+				<p>
+					{{
+						activeTab === 'conversation'
+							? $t('history.intro')
+							: activeTab === 'compare'
+								? $t('history.compareIntro')
+								: $t('history.generationIntro')
+					}}
+				</p>
 			</div>
 
 			<div class="history-tabs">
@@ -227,6 +341,14 @@ onMounted(() => load(true))
 					@click="switchTab('compare')"
 				>
 					{{ $t('history.tabs.compare') }}
+				</button>
+				<button
+					class="history-tab"
+					:class="{ active: activeTab === 'generation' }"
+					type="button"
+					@click="switchTab('generation')"
+				>
+					{{ $t('history.tabs.generation') }}
 				</button>
 			</div>
 
@@ -299,7 +421,7 @@ onMounted(() => load(true))
 				</div>
 			</template>
 
-			<template v-else>
+			<template v-else-if="activeTab === 'compare'">
 				<p v-if="compareError" class="history-error">{{ compareError }}</p>
 				<p v-if="compareLoaded && compareRecords.length === 0 && !compareError" class="history-empty">
 					{{ $t('history.compareEmpty') }}
@@ -341,6 +463,146 @@ onMounted(() => load(true))
 				<div v-if="compareHasMore" class="history-more">
 					<button class="secondary-button" type="button" :disabled="compareLoading" @click="loadMoreCompare">
 						{{ compareLoading ? $t('common.loading') : $t('history.loadMore') }}
+					</button>
+				</div>
+			</template>
+
+			<template v-else>
+				<p v-if="generationError" class="history-error">{{ generationError }}</p>
+				<p v-if="generationLoaded && generationRecords.length === 0 && !generationError" class="history-empty">
+					{{ $t('history.generationEmpty') }}
+				</p>
+
+				<div v-for="group in generationGroups" :key="group.key" class="history-group">
+					<h4 class="history-day">{{ group.label }}</h4>
+					<div v-for="record in group.list" :key="record.id" class="history-item">
+						<button
+							class="history-item-head"
+							type="button"
+							:disabled="generationDeletingId === record.id"
+							@click="toggleGeneration(record)"
+						>
+							<span class="history-question">{{ record.name }}</span>
+							<span v-if="!record.success" class="history-web generation-fail-badge">
+								{{ $t('history.generationFailed') }}
+							</span>
+							<span class="history-time">{{ timeOf(record.createdAt) }}</span>
+						</button>
+
+						<div v-if="generationExpandedId === record.id" class="history-item-body">
+							<p v-if="generationDetailLoadingId === record.id" class="history-empty">
+								{{ $t('common.loading') }}
+							</p>
+
+							<template v-else-if="generationDetail[record.id]">
+								<p class="generation-desc">{{ generationDetail[record.id].description }}</p>
+								<div class="generation-meta-row">
+									<span class="generation-agent-badge">
+										{{ $t('history.generationAgentUsed', { name: generationDetail[record.id].agentName || $t('agents.defaultAgent') }) }}
+									</span>
+									<button class="favorite-toggle" type="button" :disabled="favoritingId === record.id" @click="onToggleFavorite(record.id)">
+										{{ isFavoriteGeneration(record.id) ? $t('agent.unfavorite') : $t('agent.favorite') }}
+									</button>
+								</div>
+
+								<p v-if="!generationDetail[record.id].success" class="generation-fail-notice">
+									{{ generationDetail[record.id].errorMessage || $t('history.generationFailed') }}
+								</p>
+
+								<div class="generation-visual">
+									<img
+										v-if="generationDetail[record.id].imageUrl"
+										:src="generationDetail[record.id].imageUrl"
+										:alt="generationDetail[record.id].name"
+										class="ai-image"
+									/>
+									<CelestialVisual
+										v-else
+										:render="generationDetail[record.id].render || {}"
+										:name="generationDetail[record.id].name"
+									/>
+								</div>
+
+								<dl
+									v-if="generationDetail[record.id].parameters && Object.keys(generationDetail[record.id].parameters).length"
+									class="facts-list"
+								>
+									<div v-for="(v, k) in generationDetail[record.id].parameters" :key="k" class="fact-row">
+										<dt>{{ k }}</dt>
+										<dd>{{ v }}</dd>
+									</div>
+								</dl>
+
+								<MarkdownView
+									v-if="generationDetail[record.id].introduction"
+									:content="generationDetail[record.id].introduction"
+								/>
+
+								<div
+									v-if="generationDetail[record.id].sources && generationDetail[record.id].sources.length"
+									class="chat-sources"
+								>
+									<span class="sources-label">{{ $t('common.sources') }}</span>
+									<RouterLink
+										v-for="(s, si) in knowledgeSources(generationDetail[record.id])"
+										:key="si"
+										:to="`/object/${s.slug}`"
+										class="source-chip"
+										:title="s.excerpt"
+									>
+										{{ sourceLabel(s, generationDetail[record.id]) }}<span class="source-type">{{ s.type }}</span>
+									</RouterLink>
+								</div>
+
+								<button class="log-toggle" type="button" @click="toggleGenerationLog(record.id)">
+									{{
+										generationLogExpandedId === record.id
+											? $t('history.generationHideLog')
+											: $t('history.generationViewLog')
+									}}
+								</button>
+
+								<div v-if="generationLogExpandedId === record.id" class="log-block">
+									<div class="log-field">
+										<span class="log-label">{{ $t('history.generationSystemPrompt') }}</span>
+										<pre class="log-pre">{{ generationDetail[record.id].systemPrompt }}</pre>
+									</div>
+									<div class="log-field">
+										<span class="log-label">{{ $t('history.generationUserPrompt') }}</span>
+										<pre class="log-pre">{{ generationDetail[record.id].userPrompt }}</pre>
+									</div>
+									<div v-if="generationDetail[record.id].referenceText" class="log-field">
+										<span class="log-label">{{ $t('history.generationReference') }}</span>
+										<pre class="log-pre">{{ generationDetail[record.id].referenceText }}</pre>
+									</div>
+									<div v-if="generationDetail[record.id].rawModelResponse" class="log-field">
+										<span class="log-label">{{ $t('history.generationRawResponse') }}</span>
+										<pre class="log-pre">{{ generationDetail[record.id].rawModelResponse }}</pre>
+									</div>
+									<div v-if="generationDetail[record.id].langsmithRunId" class="log-field">
+										<span class="log-label">{{ $t('history.generationRunId') }}</span>
+										<pre class="log-pre">{{ generationDetail[record.id].langsmithRunId }}</pre>
+									</div>
+								</div>
+							</template>
+
+							<div class="history-actions">
+								<button
+									class="history-delete"
+									type="button"
+									:disabled="generationDeletingId === record.id"
+									@click="removeGeneration(record)"
+								>
+									{{ $t('history.delete') }}
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div v-if="generationHasMore" class="history-more">
+					<button class="secondary-button" type="button" :disabled="generationLoading" @click="loadMoreGeneration">
+						{{ generationLoading ? $t('common.loading') : $t('history.loadMore') }}
 					</button>
 				</div>
 			</template>
@@ -551,5 +813,127 @@ onMounted(() => load(true))
 	font-size: 0.72rem;
 	text-transform: uppercase;
 	color: var(--muted);
+}
+
+/* —— 天体生成历史 tab —— */
+.generation-fail-badge {
+	color: var(--danger, #e57373);
+	border-color: var(--danger, #e57373);
+}
+
+.generation-desc {
+	color: var(--muted);
+	font-size: 0.88rem;
+	margin: 0 0 0.4rem;
+}
+
+.generation-meta-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0 0 0.8rem;
+}
+
+.generation-agent-badge {
+	display: inline-block;
+	font-size: 0.72rem;
+	color: var(--accent);
+	border: 1px solid var(--button-border);
+	border-radius: 999px;
+	padding: 0.1rem 0.55rem;
+}
+
+.favorite-toggle {
+	padding: 0.2rem 0.7rem;
+	border: 1px solid var(--button-border);
+	border-radius: 999px;
+	background: var(--button-bg);
+	color: var(--accent);
+	font: inherit;
+	font-size: 0.72rem;
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.favorite-toggle:hover {
+	background: var(--panel-glow);
+}
+
+.favorite-toggle:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.generation-fail-notice {
+	color: var(--danger, #e57373);
+	font-size: 0.85rem;
+	margin: 0 0 0.8rem;
+}
+
+.generation-visual {
+	max-width: 320px;
+	margin: 0 auto 1rem;
+}
+
+.ai-image {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 18px;
+	border: 1px solid var(--card-border);
+}
+
+.log-toggle {
+	margin-top: 0.8rem;
+	padding: 0.35rem 0.8rem;
+	border: 1px solid var(--button-border);
+	border-radius: 999px;
+	background: var(--button-bg);
+	color: var(--accent);
+	font: inherit;
+	font-size: 0.8rem;
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.log-toggle:hover {
+	background: var(--panel-glow);
+}
+
+.log-block {
+	display: flex;
+	flex-direction: column;
+	gap: 0.7rem;
+	margin-top: 0.7rem;
+	padding-top: 0.7rem;
+	border-top: 1px dashed var(--card-border);
+}
+
+.log-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+}
+
+.log-label {
+	font-size: 0.75rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--muted);
+}
+
+.log-pre {
+	margin: 0;
+	max-height: 220px;
+	overflow: auto;
+	padding: 0.7rem 0.85rem;
+	border-radius: 10px;
+	border: 1px solid var(--card-border);
+	background: var(--panel-glow);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 0.78rem;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	word-break: break-word;
 }
 </style>

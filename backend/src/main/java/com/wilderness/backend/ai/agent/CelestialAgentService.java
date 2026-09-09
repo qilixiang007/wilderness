@@ -10,6 +10,7 @@ import com.wilderness.backend.dto.AgentStep;
 import com.wilderness.backend.dto.GenerationContent;
 import com.wilderness.backend.dto.GenerationResult;
 import com.wilderness.backend.service.AgentConfigService;
+import com.wilderness.backend.service.CelestialGenerationHistoryService;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
@@ -56,45 +57,52 @@ public class CelestialAgentService {
     private final ObjectProvider<ImageGenerator> imageGenerators;
     private final AgentConfigService agentConfigService;
     private final ObjectMapper objectMapper;
+    private final CelestialGenerationHistoryService historyService;
 
     public CelestialAgentService(@Qualifier("agentChatModel") ChatModel agentChatModel,
                                  HybridContentRetriever retriever,
                                  LangSmithTracer tracer,
                                  ObjectProvider<ImageGenerator> imageGenerators,
                                  AgentConfigService agentConfigService,
-                                 ObjectMapper objectMapper) {
+                                 ObjectMapper objectMapper,
+                                 CelestialGenerationHistoryService historyService) {
         this.agentChatModel = agentChatModel;
         this.retriever = retriever;
         this.tracer = tracer;
         this.imageGenerators = imageGenerators;
         this.agentConfigService = agentConfigService;
         this.objectMapper = objectMapper;
+        this.historyService = historyService;
     }
 
-    /** 内置 Agent 生成（agent=null）：走 AiServices 接口路径，行为与重构前一致。 */
-    public GenerationResult generate(String description) {
-        return doGenerate(null, description);
+    /** 内置 Agent 生成（agent=null）：半公开接口，userId 可为 null（未登录不落历史）。 */
+    public GenerationResult generate(Long userId, String description) {
+        return doGenerate(null, userId, description);
     }
 
     /** 使用某个自定义智能体生成：读取其配置（人设 + 工具开关），越权由 AgentConfigService 抛 404。 */
     public GenerationResult generateWithAgent(Long userId, Long agentId, String description) {
         AgentConfig agent = agentConfigService.getOwned(userId, agentId);
-        return doGenerate(agent, description);
+        return doGenerate(agent, userId, description);
     }
 
-    private GenerationResult doGenerate(AgentConfig agent, String description) {
+    private GenerationResult doGenerate(AgentConfig agent, Long userId, String description) {
         boolean custom = agent != null;
+        Long agentId = custom ? agent.getId() : null;
+        String agentName = custom ? agent.getName() : null;
         RunRef run = tracer.start(
                 custom ? "agent.generate_celestial_custom" : "agent.generate_celestial",
                 "agent",
                 Map.of("description", description, "agent", custom ? agent.getName() : "builtin"));
+        // 过程数据快照：即使下方解析/生成抛异常，trace 里已写入的内容依然可用于历史落库追溯
+        GenerationTrace trace = new GenerationTrace();
+        String reference = null;
         try {
             CelestialSearchTool tool = new CelestialSearchTool(retriever);
 
             // 服务端预检索：直接把用户描述作为检索词查真实天体资料并注入 prompt。
             // 即使模型不调用工具，参考锚点与来源列表也已就绪（Agent 的核心价值不依赖模型自觉）。
             // 自定义智能体关闭知识检索时跳过检索，注入提示文本。
-            String reference;
             if (custom && !agent.isKnowledgeSearchEnabled()) {
                 reference = "（自定义智能体未启用知识库检索，未注入站内参考资料；请基于人设与常识创作，虚构设定请在文中注明。）";
             } else {
@@ -102,7 +110,7 @@ public class CelestialAgentService {
             }
 
             // 内置与自定义统一走动态 prompt（见 generateViaDynamicPrompt）
-            GenerationContent content = generateViaDynamicPrompt(agent, description, reference);
+            GenerationContent content = generateViaDynamicPrompt(agent, description, reference, trace);
 
             // 可选升级通道：文生图（未配置、自定义关闭、或生成失败，均仅降级为 SVG，不阻塞主流程）
             String imageUrl = null;
@@ -134,20 +142,38 @@ public class CelestialAgentService {
                     content.render(),
                     imageUrl,
                     tool.sources(),
-                    steps);
+                    steps,
+                    null);
 
             tracer.finish(run, Map.of(
                     "name", result.name(),
                     "sourceCount", result.sources().size(),
                     "imageGenerated", result.imageUrl() != null));
-            return result;
+            Long historyId = historyService.save(userId, agentId, agentName, description, result,
+                    trace.systemPrompt, trace.userPrompt, reference, trace.rawResponse,
+                    run.enabled() ? run.runId() : null, true, null);
+            return withHistoryId(result, historyId);
         } catch (Exception e) {
             tracer.fail(run, e);
             // 模型侧异常（如输出解析失败）：降级为可展示结果，避免 500 打断用户。
             // 结果里带异常说明步骤，前端照常渲染（视觉走 SVG、来源为空）。
             log.warn("天体生成异常，已降级返回", e);
-            return degradedResult(e);
+            GenerationResult degraded = degradedResult(e);
+            // 失败也落库：trace 里已写入的 prompt/原始返回（哪怕为 null）正是「可追溯」的价值所在
+            Long historyId = historyService.save(userId, agentId, agentName, description, degraded,
+                    trace.systemPrompt, trace.userPrompt, reference, trace.rawResponse,
+                    run.enabled() ? run.runId() : null, false, e.getMessage());
+            return withHistoryId(degraded, historyId);
         }
+    }
+
+    /** 用落库后拿到的行 id 重建一份结果（GenerationResult 是不可变 record，historyId 需要事后补上）。 */
+    private GenerationResult withHistoryId(GenerationResult result, Long historyId) {
+        if (historyId == null) {
+            return result;
+        }
+        return new GenerationResult(result.name(), result.type(), result.parameters(), result.introduction(),
+                result.render(), result.imageUrl(), result.sources(), result.steps(), historyId);
     }
 
     /**
@@ -156,7 +182,8 @@ public class CelestialAgentService {
      * 不存在的工具名（langchain4j 默认 THROW_EXCEPTION → 降级），故检索完全依赖服务端预检索注入的 reference，
      * 来源/步骤由预检索兜底（见 doGenerate）。
      */
-    private GenerationContent generateViaDynamicPrompt(AgentConfig agent, String description, String reference) {
+    private GenerationContent generateViaDynamicPrompt(AgentConfig agent, String description, String reference,
+            GenerationTrace trace) {
         String system = CelestialAgentPrompts.BASE_SYSTEM;
         if (agent != null) {
             system += "\n\n=== 自定义智能体设定（叠加在人设之上，须遵守，但不改变输出 JSON 契约）===\n"
@@ -165,11 +192,15 @@ public class CelestialAgentService {
         String user = CelestialAgentPrompts.USER_TEMPLATE
                 .replace("{{description}}", description == null ? "" : description)
                 .replace("{{reference}}", reference == null ? "" : reference);
+        trace.systemPrompt = system;
+        trace.userPrompt = user;
         ChatRequest request = ChatRequest.builder()
                 .messages(SystemMessage.from(system), UserMessage.from(user))
                 .responseFormat(ResponseFormat.builder().type(ResponseFormatType.JSON).build())
                 .build();
         String text = agentChatModel.chat(request).aiMessage().text();
+        // 解析前先记下原始返回：即使下面解析抛异常，doGenerate 的 catch 块依然能拿到它落库
+        trace.rawResponse = text;
         return parseGenerationContent(text);
     }
 
@@ -239,7 +270,8 @@ public class CelestialAgentService {
                 null,
                 null,
                 List.of(),
-                List.of(new AgentStep("生成", "模型异常已降级返回：" + e.getMessage())));
+                List.of(new AgentStep("生成", "模型异常已降级返回：" + e.getMessage())),
+                null);
     }
 
     /** 由结构化结果拼文生图 prompt：让图像模型画出与参数一致的天体。 */
