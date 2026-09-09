@@ -138,6 +138,8 @@ export default {
 		sources: 'Reference objects',
 		imageHint: 'Procedurally rendered from parameters (upgrades to an AI image when an image API is configured)',
 		satellitesTruncated: 'The description mentions {n} moons; only the first {max} are rendered due to the display limit.',
+		favorite: '☆ Favorite',
+		unfavorite: '★ Favorited',
 		trySamples: 'Try describing:',
 		samples: [
 			'A blue-glowing gas giant, 2× the mass of Jupiter, with two pale golden rings',
@@ -215,9 +217,14 @@ export default {
 	favorites: {
 		kicker: 'COLLECTION',
 		title: 'Favorites',
+		tabs: {
+			natural: 'Natural objects',
+			generated: 'My creations'
+		},
 		add: '☆ Favorite',
 		remove: '★ Favorited',
 		empty: 'Nothing favorited yet. Open an object and tap Favorite.',
+		generatedEmpty: 'No generated bodies favorited yet. Create one in "Celestial Forge" and favorite it.',
 		needLogin: 'Log in to see your favorites',
 		offline: 'Backend unreachable; favorites unavailable.'
 	},
@@ -226,14 +233,26 @@ export default {
 		title: 'History',
 		tabs: {
 			conversation: 'Conversations',
-			compare: 'Comparisons'
+			compare: 'Comparisons',
+			generation: 'Generated bodies'
 		},
 		intro: 'Every AI conversation is persisted (MySQL + async ES index) and archived here by day, with search and delete.',
 		compareIntro: 'Every completed multi-object comparison is saved automatically (MySQL, per-account) and archived here by day, with delete.',
+		generationIntro: 'Every generated celestial body is saved automatically, with the full pipeline log (prompts, retrieved reference, raw model output) available to expand.',
 		searchPlaceholder: 'Search by question…',
 		search: 'Search',
 		empty: 'No conversations yet. Go ask the AI assistant.',
 		compareEmpty: 'No comparisons yet. Go pick a few objects to compare.',
+		generationEmpty: 'No generated bodies yet. Go create one in "Celestial Forge".',
+		generationFailed: 'Generation failed',
+		generationAgentUsed: 'Agent used: {name}',
+		generationViewLog: 'View full pipeline log',
+		generationHideLog: 'Hide pipeline log',
+		generationSystemPrompt: 'System Prompt',
+		generationUserPrompt: 'User Prompt',
+		generationReference: 'Retrieved reference material',
+		generationRawResponse: 'Raw model response',
+		generationRunId: 'LangSmith Run ID',
 		offline: 'Backend unreachable; history unavailable.',
 		loadFailed: 'Failed to load. Please retry.',
 		loadMore: 'Load more',

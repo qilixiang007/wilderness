@@ -114,10 +114,10 @@ public class AiController {
         return emitter;
     }
 
-    /** 天体生成 Agent:描述/参数 → 检索真实天体作参考 → 生成虚拟天体的介绍与渲染参数。半公开,未登录可生成。 */
+    /** 天体生成 Agent:描述/参数 → 检索真实天体作参考 → 生成虚拟天体的介绍与渲染参数。半公开,未登录可生成(不落历史)。 */
     @PostMapping("/generate-celestial")
     public ApiResponse<GenerationResult> generateCelestial(@Valid @RequestBody GenerateCelestialRequest request) throws Exception {
-        return ApiResponse.ok(celestialAgentService.generate(request.description()));
+        return ApiResponse.ok(celestialAgentService.generate(AuthContext.currentUserId(), request.description()));
     }
 
     private String toJson(Object o) {

@@ -190,6 +190,10 @@ export const api = {
 	getFavorites: () => request('/api/favorites'),
 	addFavorite: (slug) => request(`/api/favorites/${encodeURIComponent(slug)}`, { method: 'PUT' }),
 	removeFavorite: (slug) => request(`/api/favorites/${encodeURIComponent(slug)}`, { method: 'DELETE' }),
+	// —— 收藏：自建天体（生成历史记录 id）——
+	getGenerationFavorites: () => request('/api/favorites/generation'),
+	addGenerationFavorite: (id) => request(`/api/favorites/generation/${id}`, { method: 'PUT' }),
+	removeGenerationFavorite: (id) => request(`/api/favorites/generation/${id}`, { method: 'DELETE' }),
 	// —— 个人知识库文件 ——
 	getKnowledgeFiles: () => request('/api/knowledge/files'),
 	previewKnowledgeFile: (id) => request(`/api/knowledge/files/${id}/preview`),
@@ -204,6 +208,10 @@ export const api = {
 	// —— 对比历史（仅当前用户；对比完成后后端自动落库，无需手动保存）——
 	getCompareHistory: (page = 0, size = 20) => request(`/api/history/compare?page=${page}&size=${size}`),
 	deleteCompareHistory: (id) => request(`/api/history/compare/${id}`, { method: 'DELETE' }),
+	// —— 天体生成历史（仅当前用户；生成完成后后端自动落库，含完整链路日志）——
+	getGenerationHistory: (page = 0, size = 20) => request(`/api/history/generation?page=${page}&size=${size}`),
+	getGenerationHistoryDetail: (id) => request(`/api/history/generation/${id}`),
+	deleteGenerationHistory: (id) => request(`/api/history/generation/${id}`, { method: 'DELETE' }),
 	// —— 自定义智能体（按用户隔离）——
 	getAgents: () => request('/api/agents'),
 	createAgent: (payload) =>

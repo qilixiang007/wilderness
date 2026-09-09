@@ -10,6 +10,7 @@ import SelectDropdown from '../components/SelectDropdown.vue'
 import { repairRender } from '../utils/renderRepair'
 import { api, ApiUnavailableError } from '../api'
 import { useAuth } from '../composables/useAuth'
+import { useFavorites } from '../composables/useFavorites'
 
 const { t, tm } = useI18n()
 
@@ -39,6 +40,9 @@ const samples = tm('agent.samples')
 
 // —— 自定义智能体（登录后可用；未登录走内置路径）——
 const { isLoggedIn, refreshMe } = useAuth()
+// —— 收藏自建天体：result.historyId 存在才可收藏（未登录/落库失败时为 null，不展示按钮）——
+const { isFavoriteGeneration, toggleGeneration } = useFavorites()
+const favoriting = ref(false)
 const myAgents = ref([])
 const selectedAgentId = ref('') // '' = 内置智能体
 const editing = ref(null) // null | { id }，id 为 null 表示新建
@@ -219,6 +223,16 @@ function backfillForm(res) {
 	if (!radius.value && p['半径']) radius.value = p['半径']
 	if (!temperature.value && p['表面温度']) temperature.value = p['表面温度']
 	if (!selectedType.value && res.type) selectedType.value = res.type
+}
+
+async function onToggleFavorite() {
+	if (!result.value?.historyId || favoriting.value) return
+	favoriting.value = true
+	try {
+		await toggleGeneration({ historyId: result.value.historyId })
+	} finally {
+		favoriting.value = false
+	}
 }
 </script>
 
@@ -419,7 +433,18 @@ function backfillForm(res) {
 
 				<!-- 天体视觉 + 基本信息 -->
 				<div class="result-block visual-block">
-					<h4 class="result-title">{{ result.name }}</h4>
+					<div class="result-name-row">
+						<h4 class="result-title">{{ result.name }}</h4>
+						<button
+							v-if="result.historyId"
+							class="favorite-toggle"
+							type="button"
+							:disabled="favoriting"
+							@click="onToggleFavorite"
+						>
+							{{ isFavoriteGeneration(result.historyId) ? $t('agent.unfavorite') : $t('agent.favorite') }}
+						</button>
+					</div>
 					<div class="visual-panel">
 						<img v-if="result.imageUrl" :src="result.imageUrl" :alt="result.name" class="ai-image" />
 						<CelestialVisual v-else :render="visualRender || result.render || {}" :name="result.name" />
@@ -670,6 +695,39 @@ function backfillForm(res) {
 	font-family: var(--font-display);
 	font-size: 1.05rem;
 	margin: 0 0 0.8rem;
+}
+
+.result-name-row {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.6rem;
+	margin: 0 0 0.8rem;
+}
+
+.result-name-row .result-title {
+	margin: 0;
+}
+
+.favorite-toggle {
+	padding: 0.3rem 0.8rem;
+	border: 1px solid var(--button-border);
+	border-radius: 999px;
+	background: var(--button-bg);
+	color: var(--accent);
+	font: inherit;
+	font-size: 0.8rem;
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.favorite-toggle:hover {
+	background: var(--panel-glow);
+}
+
+.favorite-toggle:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
 }
 
 .step-list {

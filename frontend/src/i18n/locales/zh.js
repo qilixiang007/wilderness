@@ -138,6 +138,8 @@ export default {
 		sources: '参考的真实天体',
 		imageHint: '图片由参数化渲染生成（配置文生图后升级为 AI 生成图）',
 		satellitesTruncated: '描述中提到了 {n} 颗卫星，受画面展示上限限制，仅渲染前 {max} 颗。',
+		favorite: '☆ 收藏',
+		unfavorite: '★ 已收藏',
 		trySamples: '试试这样描述：',
 		samples: [
 			'一个散发蓝色光芒的气态巨行星，质量是木星的 2 倍，有两圈淡金色的行星环',
@@ -215,9 +217,14 @@ export default {
 	favorites: {
 		kicker: '收藏记录',
 		title: '我的收藏',
+		tabs: {
+			natural: '天然天体',
+			generated: '自建天体'
+		},
 		add: '☆ 收藏',
 		remove: '★ 已收藏',
 		empty: '还没有收藏任何天体。去详情页点「收藏」吧。',
+		generatedEmpty: '还没有收藏任何自建天体。去「天体生成」创作一个再收藏吧。',
 		needLogin: '登录后才能查看收藏',
 		offline: '后端不可用，无法加载收藏'
 	},
@@ -226,14 +233,26 @@ export default {
 		title: '历史',
 		tabs: {
 			conversation: '对话历史',
-			compare: '对比历史'
+			compare: '对比历史',
+			generation: '天体生成'
 		},
 		intro: '你的每一次 AI 问答都会落库保存（同步 MySQL + 异步入 ES 分析索引），这里按天归档，支持搜索与删除。',
 		compareIntro: '每次多天体对比生成完都会自动保存（MySQL 落库，按账号隔离），这里按天归档，支持删除。',
+		generationIntro: '每次生成的天体都会自动保存，包含完整链路日志（prompt、检索参考资料、模型原始返回），可展开追溯。',
 		searchPlaceholder: '搜索问题关键词…',
 		search: '搜索',
 		empty: '还没有对话记录。去「AI 问答」提问吧。',
 		compareEmpty: '还没有对比记录。去挑几个天体对比一下吧。',
+		generationEmpty: '还没有生成记录。去「天体生成」创作一个天体吧。',
+		generationFailed: '生成失败',
+		generationAgentUsed: '使用的智能体：{name}',
+		generationViewLog: '查看完整链路日志',
+		generationHideLog: '收起链路日志',
+		generationSystemPrompt: 'System Prompt',
+		generationUserPrompt: 'User Prompt',
+		generationReference: '检索到的参考资料原文',
+		generationRawResponse: '模型原始返回',
+		generationRunId: 'LangSmith Run ID',
 		offline: '后端不可用，无法加载对话历史。',
 		loadFailed: '加载失败，请重试。',
 		loadMore: '加载更多',
