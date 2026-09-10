@@ -37,6 +37,16 @@ public class EmailService {
 	}
 
 	public void sendCode(String to, String code) {
+		send(to, "「宇宙是旷野」登录验证码",
+				"你的验证码是 <b>" + code + "</b>，5 分钟内有效。请勿泄露给他人。");
+	}
+
+	/** 通用告警邮件（如 Redis 故障通知），复用同一套 SMTP 配置与发送逻辑。 */
+	public void sendAlert(String to, String subject, String htmlBody) {
+		send(to, subject, htmlBody);
+	}
+
+	private void send(String to, String subject, String htmlBody) {
 		if (mailHost == null || mailHost.isBlank()) {
 			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "邮件服务未配置");
 		}
@@ -50,12 +60,12 @@ public class EmailService {
 			helper.setTo(to);
 			String from = props.from() == null || props.from().isBlank() ? mailUsername : props.from();
 			helper.setFrom(from);
-			helper.setSubject("「宇宙是旷野」登录验证码");
-			helper.setText("你的验证码是 <b>" + code + "</b>，5 分钟内有效。请勿泄露给他人。", true);
+			helper.setSubject(subject);
+			helper.setText(htmlBody, true);
 			sender.send(message);
-			log.info("验证码邮件已发送至 {}", to);
+			log.info("邮件已发送至 {} subject={}", to, subject);
 		} catch (Exception e) {
-			log.error("验证码邮件发送失败 to={}", to, e);
+			log.error("邮件发送失败 to={} subject={}", to, subject, e);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "邮件发送失败，请稍后重试");
 		}
 	}

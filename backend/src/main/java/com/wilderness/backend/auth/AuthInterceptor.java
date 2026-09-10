@@ -2,6 +2,8 @@ package com.wilderness.backend.auth;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
@@ -18,6 +20,8 @@ import java.util.Arrays;
  */
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
+
+	private static final Logger log = LoggerFactory.getLogger(AuthInterceptor.class);
 
 	private static final String[] REQUIRED = {
 			"/api/favorites/**",
@@ -49,7 +53,14 @@ public class AuthInterceptor implements HandlerInterceptor {
 		Long userId = null;
 		String token = sessionService.tokenFromCookie(request);
 		if (token != null && !token.isBlank()) {
-			userId = sessionService.getUserId(token);
+			try {
+				userId = sessionService.getUserId(token);
+			} catch (Exception e) {
+				log.warn("Redis 会话查询失败，按未登录降级处理 path={}", request.getRequestURI(), e);
+				if (requiresAuth(request.getRequestURI())) {
+					throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "服务暂时不可用，请稍后再试");
+				}
+			}
 		}
 		if (userId != null) {
 			AuthContext.setUserId(userId);

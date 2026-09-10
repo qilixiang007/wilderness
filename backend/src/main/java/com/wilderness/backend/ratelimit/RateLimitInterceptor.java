@@ -4,6 +4,8 @@ import com.wilderness.backend.auth.AuthContext;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,6 +24,7 @@ import java.util.Map;
 @Component
 public class RateLimitInterceptor implements HandlerInterceptor {
 
+	private static final Logger log = LoggerFactory.getLogger(RateLimitInterceptor.class);
 	private static final int WINDOW_SECONDS = 60;
 	private static final int GLOBAL_LIMIT = 200;
 
@@ -64,11 +67,18 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 		String identifier = userId != null ? "user:" + userId : "ip:" + clientIp(request);
 		int limit = userId != null ? matched.getValue()[0] : matched.getValue()[1];
 
-		if (!limiter.tryAcquire("ai:ratelimit:" + identifier + ":" + matched.getKey(), limit, WINDOW_SECONDS)) {
-			throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "AI 请求过于频繁，请稍后再试");
-		}
-		if (!limiter.tryAcquire("ai:ratelimit:global", GLOBAL_LIMIT, WINDOW_SECONDS)) {
-			throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "系统当前 AI 请求量较大，请稍后再试");
+		try {
+			if (!limiter.tryAcquire("ai:ratelimit:" + identifier + ":" + matched.getKey(), limit, WINDOW_SECONDS)) {
+				throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "AI 请求过于频繁，请稍后再试");
+			}
+			if (!limiter.tryAcquire("ai:ratelimit:global", GLOBAL_LIMIT, WINDOW_SECONDS)) {
+				throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "系统当前 AI 请求量较大，请稍后再试");
+			}
+		} catch (ResponseStatusException e) {
+			throw e;
+		} catch (Exception e) {
+			log.warn("Redis 限流查询失败，按超限处理 path={}", request.getRequestURI(), e);
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI 服务暂时不可用，请稍后再试");
 		}
 		return true;
 	}

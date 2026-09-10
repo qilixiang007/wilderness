@@ -43,13 +43,24 @@ public class VerifyCodeService {
 	 * 调用方应据此如实告知用户验证码在哪，绝不虚构"已发送到邮箱"。
 	 */
 	public String sendCode(String email, String purpose) {
-		Boolean first = redis.opsForValue()
-				.setIfAbsent(RATE_KEY + email, "1", Duration.ofSeconds(props.verifyCodeRateLimit()));
+		Boolean first;
+		try {
+			first = redis.opsForValue()
+					.setIfAbsent(RATE_KEY + email, "1", Duration.ofSeconds(props.verifyCodeRateLimit()));
+		} catch (Exception e) {
+			log.error("验证码限流查询失败 email={}", email, e);
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "验证码服务暂时不可用，请稍后再试");
+		}
 		if (Boolean.FALSE.equals(first)) {
 			throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "发送太频繁，请稍后再试");
 		}
 		String code = String.format("%06d", ThreadLocalRandom.current().nextInt(1_000_000));
-		redis.opsForValue().set(CODE_KEY + email + ":" + purpose, code, Duration.ofSeconds(props.codeTtl()));
+		try {
+			redis.opsForValue().set(CODE_KEY + email + ":" + purpose, code, Duration.ofSeconds(props.codeTtl()));
+		} catch (Exception e) {
+			log.error("验证码存储失败 email={}", email, e);
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "验证码服务暂时不可用，请稍后再试");
+		}
 		if (props.devCodeLog()) {
 			log.info("[dev-code-log] 验证码 email={} purpose={} code={}（开发模式：未发送邮件）", email, purpose, code);
 			return "log";
@@ -66,12 +77,22 @@ public class VerifyCodeService {
 		String attemptKey = email + ":" + purpose;
 		loginAttemptService.assertNotLocked(attemptKey);
 		String key = CODE_KEY + email + ":" + purpose;
-		String expected = redis.opsForValue().get(key);
+		String expected;
+		try {
+			expected = redis.opsForValue().get(key);
+		} catch (Exception e) {
+			log.error("验证码查询失败 email={}", email, e);
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "验证码服务暂时不可用，请稍后再试");
+		}
 		if (expected == null || code == null || !expected.equals(code)) {
 			loginAttemptService.onFailure(attemptKey);
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "验证码错误或已过期");
 		}
 		loginAttemptService.onSuccess(attemptKey);
-		redis.delete(key);
+		try {
+			redis.delete(key);
+		} catch (Exception e) {
+			log.warn("验证码已校验通过，但删除一次性 key 失败 email={}", email, e);
+		}
 	}
 }
