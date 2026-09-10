@@ -36,19 +36,23 @@ public class CelestialGenerationHistoryService {
 
 	private final CelestialGenerationHistoryRepository repository;
 	private final ObjectMapper objectMapper;
+	private final GeneratedImageStorageService imageStorageService;
 
-	public CelestialGenerationHistoryService(CelestialGenerationHistoryRepository repository, ObjectMapper objectMapper) {
+	public CelestialGenerationHistoryService(CelestialGenerationHistoryRepository repository, ObjectMapper objectMapper,
+			GeneratedImageStorageService imageStorageService) {
 		this.repository = repository;
 		this.objectMapper = objectMapper;
+		this.imageStorageService = imageStorageService;
 	}
 
 	/**
 	 * 未登录（userId 为 null）不落库；序列化/落库失败只记日志，不向上抛。
 	 * 返回落库后的行 id（供收藏功能引用）；未落库/失败返回 null。
+	 * imageId：本地持久化图对应的 GeneratedImage 行 id，外部临时链接/无图传 null。
 	 */
 	public Long save(Long userId, Long agentId, String agentName, String description, GenerationResult result,
-			String systemPrompt, String userPrompt, String referenceText, String rawModelResponse,
-			String langsmithRunId, boolean success, String errorMessage) {
+			boolean imageTemporary, Long imageId, String systemPrompt, String userPrompt, String referenceText,
+			String rawModelResponse, String langsmithRunId, boolean success, String errorMessage) {
 		if (userId == null) {
 			return null;
 		}
@@ -59,8 +63,8 @@ public class CelestialGenerationHistoryService {
 			String stepsJson = toJson(result.steps());
 			CelestialGenerationHistory saved = repository.save(new CelestialGenerationHistory(userId, agentId, agentName, description,
 					result.name(), result.type(), parametersJson, result.introduction(), renderJson,
-					result.imageUrl(), sourcesJson, stepsJson, referenceText, systemPrompt, userPrompt,
-					rawModelResponse, langsmithRunId, success, errorMessage));
+					result.imageUrl(), imageTemporary, imageId, sourcesJson, stepsJson, referenceText, systemPrompt,
+					userPrompt, rawModelResponse, langsmithRunId, success, errorMessage));
 			return saved.getId();
 		} catch (Exception e) {
 			log.warn("celestial generation history save failed, userId={}", userId, e);
@@ -90,12 +94,15 @@ public class CelestialGenerationHistoryService {
 		CelestialGenerationHistory history = repository.findByIdAndUserId(id, userId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "记录不存在"));
 		repository.delete(history);
+		if (history.getImageId() != null) {
+			imageStorageService.delete(history.getImageId());
+		}
 	}
 
 	private CelestialGenerationSummaryDTO toSummaryDto(CelestialGenerationHistory history) {
 		return new CelestialGenerationSummaryDTO(
 				history.getId(), history.getName(), history.getType(), history.getImageUrl(),
-				fromJson(history.getRenderJson(), RenderSpec.class), history.getAgentName(),
+				history.isImageTemporary(), fromJson(history.getRenderJson(), RenderSpec.class), history.getAgentName(),
 				history.isSuccess(), history.getCreatedAt());
 	}
 
@@ -104,6 +111,7 @@ public class CelestialGenerationHistoryService {
 				history.getId(), history.getDescription(), history.getName(), history.getType(),
 				fromJson(history.getParametersJson(), new TypeReference<Map<String, String>>() { }),
 				history.getIntroduction(), fromJson(history.getRenderJson(), RenderSpec.class), history.getImageUrl(),
+				history.isImageTemporary(),
 				fromJson(history.getSourcesJson(), new TypeReference<List<AiSource>>() { }),
 				fromJson(history.getStepsJson(), new TypeReference<List<AgentStep>>() { }),
 				history.getAgentName(), history.isSuccess(), history.getErrorMessage(),

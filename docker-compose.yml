@@ -90,6 +90,9 @@ services:
       AUTH_SESSION_TTL: ${AUTH_SESSION_TTL:-604800}
       AUTH_DEV_CODE_LOG: ${AUTH_DEV_CODE_LOG:-false}
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      GENERATED_IMAGES_DIR: /app/data/generated-images
+    volumes:
+      - generated-images-data:/app/data/generated-images
     ports:
       - '8080:8080'
     healthcheck:
@@ -159,3 +162,4 @@ volumes:
   redis-data:
   grafana-data:
   es-data:
+  generated-images-data:

@@ -522,6 +522,9 @@ onMounted(() => load(true))
 										:name="generationDetail[record.id].name"
 									/>
 								</div>
+								<p v-if="generationDetail[record.id].imageUrl && generationDetail[record.id].imageTemporary" class="generation-image-temporary-hint">
+									{{ $t('agent.imageTemporaryHint') }}
+								</p>
 
 								<dl
 									v-if="generationDetail[record.id].parameters && Object.keys(generationDetail[record.id].parameters).length"
@@ -868,6 +871,13 @@ onMounted(() => load(true))
 	color: var(--danger, #e57373);
 	font-size: 0.85rem;
 	margin: 0 0 0.8rem;
+}
+
+.generation-image-temporary-hint {
+	color: var(--danger, #e57373);
+	font-size: 0.78rem;
+	text-align: center;
+	margin: 0.6rem 0 0;
 }
 
 .generation-visual {

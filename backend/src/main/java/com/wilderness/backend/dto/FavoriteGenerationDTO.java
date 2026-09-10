@@ -12,5 +12,6 @@ public record FavoriteGenerationDTO(
 		String introduction,
 		RenderSpec render,
 		String imageUrl,
+		boolean imageTemporary,
 		Instant createdAt) {
 }

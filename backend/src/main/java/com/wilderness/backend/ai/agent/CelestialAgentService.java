@@ -11,6 +11,7 @@ import com.wilderness.backend.dto.GenerationContent;
 import com.wilderness.backend.dto.GenerationResult;
 import com.wilderness.backend.service.AgentConfigService;
 import com.wilderness.backend.service.CelestialGenerationHistoryService;
+import com.wilderness.backend.service.GeneratedImageStorageService;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
@@ -58,6 +59,7 @@ public class CelestialAgentService {
     private final AgentConfigService agentConfigService;
     private final ObjectMapper objectMapper;
     private final CelestialGenerationHistoryService historyService;
+    private final GeneratedImageStorageService imageStorageService;
 
     public CelestialAgentService(@Qualifier("agentChatModel") ChatModel agentChatModel,
                                  HybridContentRetriever retriever,
@@ -65,7 +67,8 @@ public class CelestialAgentService {
                                  ObjectProvider<ImageGenerator> imageGenerators,
                                  AgentConfigService agentConfigService,
                                  ObjectMapper objectMapper,
-                                 CelestialGenerationHistoryService historyService) {
+                                 CelestialGenerationHistoryService historyService,
+                                 GeneratedImageStorageService imageStorageService) {
         this.agentChatModel = agentChatModel;
         this.retriever = retriever;
         this.tracer = tracer;
@@ -73,6 +76,7 @@ public class CelestialAgentService {
         this.agentConfigService = agentConfigService;
         this.objectMapper = objectMapper;
         this.historyService = historyService;
+        this.imageStorageService = imageStorageService;
     }
 
     /** 内置 Agent 生成（agent=null）：半公开接口，userId 可为 null（未登录不落历史）。 */
@@ -114,10 +118,28 @@ public class CelestialAgentService {
 
             // 可选升级通道：文生图（未配置、自定义关闭、或生成失败，均仅降级为 SVG，不阻塞主流程）
             String imageUrl = null;
+            boolean imageTemporary = false;
+            Long imageId = null;
             ImageGenerator imageGenerator = imageGenerators.getIfAvailable();
             if ((!custom || agent.isImageGenEnabled()) && imageGenerator != null) {
                 try {
-                    imageUrl = imageGenerator.generate(buildImagePrompt(content));
+                    String remoteUrl = imageGenerator.generate(buildImagePrompt(content));
+                    // DashScope 返回的链接约 24h 过期，登录用户下载转存到本地长期有效；
+                    // 未登录不落历史，转存了也是孤儿数据，直接用外部链接够本次会话用
+                    if (userId != null) {
+                        try {
+                            GeneratedImageStorageService.StoredImage stored = imageStorageService.download(remoteUrl, userId);
+                            imageUrl = stored.relativeUrl();
+                            imageId = stored.id();
+                        } catch (Exception e) {
+                            log.warn("生成图片本地转存失败，退化为外部临时链接", e);
+                            imageUrl = remoteUrl;
+                            imageTemporary = true;
+                        }
+                    } else {
+                        imageUrl = remoteUrl;
+                        imageTemporary = true;
+                    }
                 } catch (Exception e) {
                     // 文生图失败：记录但不打断，前端走 SVG
                     tool.steps().add(new AgentStep("图像生成", "文生图失败，已回退程序化渲染：" + e.getMessage()));
@@ -143,14 +165,15 @@ public class CelestialAgentService {
                     imageUrl,
                     tool.sources(),
                     steps,
-                    null);
+                    null,
+                    imageTemporary);
 
             tracer.finish(run, Map.of(
                     "name", result.name(),
                     "sourceCount", result.sources().size(),
                     "imageGenerated", result.imageUrl() != null));
             Long historyId = historyService.save(userId, agentId, agentName, description, result,
-                    trace.systemPrompt, trace.userPrompt, reference, trace.rawResponse,
+                    imageTemporary, imageId, trace.systemPrompt, trace.userPrompt, reference, trace.rawResponse,
                     run.enabled() ? run.runId() : null, true, null);
             return withHistoryId(result, historyId);
         } catch (Exception e) {
@@ -161,7 +184,7 @@ public class CelestialAgentService {
             GenerationResult degraded = degradedResult(e);
             // 失败也落库：trace 里已写入的 prompt/原始返回（哪怕为 null）正是「可追溯」的价值所在
             Long historyId = historyService.save(userId, agentId, agentName, description, degraded,
-                    trace.systemPrompt, trace.userPrompt, reference, trace.rawResponse,
+                    false, null, trace.systemPrompt, trace.userPrompt, reference, trace.rawResponse,
                     run.enabled() ? run.runId() : null, false, e.getMessage());
             return withHistoryId(degraded, historyId);
         }
@@ -173,7 +196,7 @@ public class CelestialAgentService {
             return result;
         }
         return new GenerationResult(result.name(), result.type(), result.parameters(), result.introduction(),
-                result.render(), result.imageUrl(), result.sources(), result.steps(), historyId);
+                result.render(), result.imageUrl(), result.sources(), result.steps(), historyId, result.imageTemporary());
     }
 
     /**
@@ -271,7 +294,8 @@ public class CelestialAgentService {
                 null,
                 List.of(),
                 List.of(new AgentStep("生成", "模型异常已降级返回：" + e.getMessage())),
-                null);
+                null,
+                false);
     }
 
     /** 由结构化结果拼文生图 prompt：让图像模型画出与参数一致的天体。 */

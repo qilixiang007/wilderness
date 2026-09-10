@@ -24,6 +24,10 @@ public class KnowledgeIngestionRunner implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
+            if (ingestionService.hasPublicCorpus()) {
+                log.info("知识库已有公共语料数据,跳过启动自动入库(语料变更后调用 POST /api/knowledge/reingest 手动刷新)");
+                return;
+            }
             ingestionService.ingestFromClasspath();
         } catch (Exception e) {
             log.error("知识库入库失败(可稍后手动重跑):{}", e.getMessage());

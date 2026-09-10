@@ -137,6 +137,7 @@ export default {
 		introduction: '科学介绍',
 		sources: '参考的真实天体',
 		imageHint: '图片由参数化渲染生成（配置文生图后升级为 AI 生成图）',
+		imageTemporaryHint: '该图为临时链接，24 小时后失效，请自行保存；收藏可尝试自动转存。',
 		satellitesTruncated: '描述中提到了 {n} 颗卫星，受画面展示上限限制，仅渲染前 {max} 颗。',
 		favorite: '☆ 收藏',
 		unfavorite: '★ 已收藏',

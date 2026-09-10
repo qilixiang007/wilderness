@@ -452,6 +452,9 @@ async function onToggleFavorite() {
 					<p class="visual-caption">
 						{{ $t('agent.imageHint') }}
 					</p>
+					<p v-if="result.imageUrl && result.imageTemporary" class="visual-caption image-temporary-hint">
+						{{ $t('agent.imageTemporaryHint') }}
+					</p>
 					<p v-if="!result.imageUrl && visualRender?.truncatedFrom" class="visual-caption">
 						{{ $t('agent.satellitesTruncated', { n: visualRender.truncatedFrom, max: visualRender.satellites.length }) }}
 					</p>
@@ -786,6 +789,10 @@ async function onToggleFavorite() {
 	font-size: 0.78rem;
 	color: var(--muted);
 	margin: 0.6rem 0 0;
+}
+
+.image-temporary-hint {
+	color: var(--danger, #e57373);
 }
 
 .agent-sources {

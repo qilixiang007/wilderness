@@ -137,6 +137,7 @@ export default {
 		introduction: 'Science introduction',
 		sources: 'Reference objects',
 		imageHint: 'Procedurally rendered from parameters (upgrades to an AI image when an image API is configured)',
+		imageTemporaryHint: 'This is a temporary link that expires in 24 hours — save it yourself; favoriting will try to store a permanent copy.',
 		satellitesTruncated: 'The description mentions {n} moons; only the first {max} are rendered due to the display limit.',
 		favorite: '☆ Favorite',
 		unfavorite: '★ Favorited',

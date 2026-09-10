@@ -57,6 +57,15 @@ public class CelestialGenerationHistory {
 	@Column(name = "image_url")
 	private String imageUrl;
 
+	/** true=imageUrl 是会过期的外部临时链接（未登录/本地转存失败）；本地图或无图为 false。 */
+	@Column(name = "image_temporary", nullable = false)
+	private boolean imageTemporary;
+
+	/** 本地持久化图对应的 GeneratedImage 行 id；外部临时链接/无图为 null。
+	 *  删除本条历史时据此联动删图片文件；收藏时据此 copyLocal 复制一份独立文件。 */
+	@Column(name = "image_id")
+	private Long imageId;
+
 	@Column(name = "sources_json", columnDefinition = "TEXT")
 	private String sourcesJson;
 
@@ -95,9 +104,9 @@ public class CelestialGenerationHistory {
 
 	public CelestialGenerationHistory(Long userId, Long agentId, String agentName, String description,
 			String name, String type, String parametersJson, String introduction, String renderJson,
-			String imageUrl, String sourcesJson, String stepsJson, String referenceText, String systemPrompt,
-			String userPrompt, String rawModelResponse, String langsmithRunId, boolean success,
-			String errorMessage) {
+			String imageUrl, boolean imageTemporary, Long imageId, String sourcesJson, String stepsJson,
+			String referenceText, String systemPrompt, String userPrompt, String rawModelResponse,
+			String langsmithRunId, boolean success, String errorMessage) {
 		this.userId = userId;
 		this.agentId = agentId;
 		this.agentName = agentName;
@@ -108,6 +117,8 @@ public class CelestialGenerationHistory {
 		this.introduction = introduction;
 		this.renderJson = renderJson;
 		this.imageUrl = imageUrl;
+		this.imageTemporary = imageTemporary;
+		this.imageId = imageId;
 		this.sourcesJson = sourcesJson;
 		this.stepsJson = stepsJson;
 		this.referenceText = referenceText;
@@ -162,6 +173,14 @@ public class CelestialGenerationHistory {
 
 	public String getImageUrl() {
 		return imageUrl;
+	}
+
+	public boolean isImageTemporary() {
+		return imageTemporary;
+	}
+
+	public Long getImageId() {
+		return imageId;
 	}
 
 	public String getSourcesJson() {
