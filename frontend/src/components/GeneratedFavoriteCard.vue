@@ -19,6 +19,9 @@ defineEmits(['remove'])
 		<div class="object-copy">
 			<h4>{{ item.name }}</h4>
 			<p v-if="item.type">{{ item.type }}</p>
+			<p v-if="item.imageUrl && item.imageTemporary" class="image-temporary-hint">
+				{{ $t('agent.imageTemporaryHint') }}
+			</p>
 			<button class="secondary-button" type="button" @click="$emit('remove', item)">
 				{{ $t('favorites.remove') }}
 			</button>
@@ -51,5 +54,10 @@ defineEmits(['remove'])
 .generated-visual :deep(.fit-visual) {
 	width: 100%;
 	height: 100%;
+}
+
+.image-temporary-hint {
+	color: var(--danger, #e57373);
+	font-size: 0.78rem;
 }
 </style>

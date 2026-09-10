@@ -8,6 +8,7 @@ public record CelestialGenerationSummaryDTO(
 		String name,
 		String type,
 		String imageUrl,
+		boolean imageTemporary,
 		RenderSpec render,
 		String agentName,
 		boolean success,

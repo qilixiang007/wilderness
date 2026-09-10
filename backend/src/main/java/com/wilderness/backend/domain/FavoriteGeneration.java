@@ -50,6 +50,14 @@ public class FavoriteGeneration {
 	@Column(name = "image_url")
 	private String imageUrl;
 
+	/** true=imageUrl 是会过期的外部临时链接；本地图或无图为 false（含义与 CelestialGenerationHistory 一致）。 */
+	@Column(name = "image_temporary", nullable = false)
+	private boolean imageTemporary;
+
+	/** 本地持久化图对应的 GeneratedImage 行 id（收藏自己独立复制的那一份，与来源历史记录的 imageId 不同）。 */
+	@Column(name = "image_id")
+	private Long imageId;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -58,7 +66,7 @@ public class FavoriteGeneration {
 	}
 
 	public FavoriteGeneration(Long userId, Long generationId, String name, String type, String parametersJson,
-			String introduction, String renderJson, String imageUrl) {
+			String introduction, String renderJson, String imageUrl, boolean imageTemporary, Long imageId) {
 		this.userId = userId;
 		this.generationId = generationId;
 		this.name = name;
@@ -67,6 +75,8 @@ public class FavoriteGeneration {
 		this.introduction = introduction;
 		this.renderJson = renderJson;
 		this.imageUrl = imageUrl;
+		this.imageTemporary = imageTemporary;
+		this.imageId = imageId;
 		this.createdAt = Instant.now();
 	}
 
@@ -104,6 +114,14 @@ public class FavoriteGeneration {
 
 	public String getImageUrl() {
 		return imageUrl;
+	}
+
+	public boolean isImageTemporary() {
+		return imageTemporary;
+	}
+
+	public Long getImageId() {
+		return imageId;
 	}
 
 	public Instant getCreatedAt() {

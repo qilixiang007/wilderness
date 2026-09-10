@@ -88,6 +88,10 @@ wilderness:
       endpoint: https://api.smith.langchain.com
       api-key: ${LANGSMITH_API_KEY:}
       project: ${LANGSMITH_PROJECT:wilderness}
+  storage:
+    # 文生图产出转存本地的挂载目录；容器内对应 docker-compose 挂的 volume，
+    # 本地非容器跑给相对路径默认值，方便直接起。
+    generated-images-dir: ${GENERATED_IMAGES_DIR:./data/generated-images}
   history:
     # 对话历史落库总开关；关闭后不写 MySQL/ES/MQ
     enabled: ${HISTORY_ENABLED:true}

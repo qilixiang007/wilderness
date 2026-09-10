@@ -17,6 +17,7 @@ public record CelestialGenerationDetailDTO(
 		String introduction,
 		RenderSpec render,
 		String imageUrl,
+		boolean imageTemporary,
 		List<AiSource> sources,
 		List<AgentStep> steps,
 		String agentName,

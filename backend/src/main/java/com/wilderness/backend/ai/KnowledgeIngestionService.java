@@ -54,14 +54,32 @@ public class KnowledgeIngestionService {
         this.chunkOverlap = chunkOverlap;
     }
 
-    public void ingestFromClasspath() throws Exception {
+    /** 公共语料(不含 user_id 字段)是否已入库,供启动时判断是否跳过自动入库。 */
+    public boolean hasPublicCorpus() throws Exception {
+        indexManager.ensureIndex();
+        long count = es.count(c -> c
+                .index(indexManager.indexName())
+                .query(q -> q.bool(b -> b.mustNot(m -> m.exists(e -> e.field("user_id")))))
+        ).count();
+        return count > 0;
+    }
+
+    /** 清空公共语料(不含 user_id 字段的全部文档),手动重新入库前先调用,避免语料变少后旧块残留。 */
+    public void deletePublicCorpus() throws Exception {
+        indexManager.ensureIndex();
+        es.deleteByQuery(d -> d.index(indexManager.indexName())
+                .refresh(true)
+                .query(q -> q.bool(b -> b.mustNot(m -> m.exists(e -> e.field("user_id"))))));
+    }
+
+    public int ingestFromClasspath() throws Exception {
         indexManager.ensureIndex();
 
         Resource[] resources = new PathMatchingResourcePatternResolver()
                 .getResources("classpath:knowledge/*.md");
         if (resources.length == 0) {
             log.warn("未找到 classpath:knowledge/*.md 语料文件");
-            return;
+            return 0;
         }
 
         List<Document> documents = new ArrayList<>();
@@ -92,6 +110,7 @@ public class KnowledgeIngestionService {
 
         int written = ingestSegments(segments, embeddings, null);
         log.info("入库完成:索引 [{}] 共写入 {} 条记录", indexManager.indexName(), written);
+        return written;
     }
 
     /**
