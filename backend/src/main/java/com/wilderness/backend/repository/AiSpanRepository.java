@@ -14,6 +14,9 @@ public interface AiSpanRepository extends JpaRepository<AiSpan, String> {
 
 	List<AiSpan> findByTraceIdInOrderByStartTimeAsc(Collection<String> traceIds);
 
+	/** dotted_order 各段是定长时间戳 + UUID，按字符串升序即为深度优先顺序。 */
+	List<AiSpan> findByTraceIdOrderByDottedOrderAsc(String traceId);
+
 	@Modifying
 	@Query("delete from AiSpan s where s.startTime < :cutoff")
 	int deleteStartedBefore(@Param("cutoff") Instant cutoff);

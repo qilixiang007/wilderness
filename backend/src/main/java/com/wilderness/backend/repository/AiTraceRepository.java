@@ -3,6 +3,7 @@ package com.wilderness.backend.repository;
 import com.wilderness.backend.domain.AiTrace;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,7 +12,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
-public interface AiTraceRepository extends JpaRepository<AiTrace, String> {
+public interface AiTraceRepository extends JpaRepository<AiTrace, String>, JpaSpecificationExecutor<AiTrace> {
 
 	/** 批量写入前查出已存在的 id：MQ 重投或补偿重放时据此去重，保证幂等。 */
 	@Query("select t.traceId from AiTrace t where t.traceId in :ids")
