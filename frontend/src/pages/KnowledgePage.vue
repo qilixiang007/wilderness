@@ -12,6 +12,9 @@ const { t, tm } = useI18n()
 const { isLoggedIn } = useAuth()
 const { confirm } = useConfirm()
 
+// 跟后端 KnowledgeUploadService.MAX_FILES_PER_USER 保持一致
+const MAX_KNOWLEDGE_FILES = 20
+
 // 知识库工作原理科普：query → 检索 → AI 作答，给非专业用户看的简化流程
 const flowSteps = tm('knowledge.flowSteps')
 
@@ -129,14 +132,22 @@ watch(isLoggedIn, (v) => {
 
 			<div class="upload-bar">
 				<template v-if="isLoggedIn">
-					<label class="upload-btn" :class="{ disabled: uploading }">
+					<label class="upload-btn" :class="{ disabled: uploading || myFiles.length >= MAX_KNOWLEDGE_FILES }">
 						{{
 							uploading
 								? $t('knowledge.uploading')
 								: $t('knowledge.uploadFile')
 						}}
-						<input type="file" accept=".txt,.md,.pdf,.docx,.xls,.xlsx" :disabled="uploading" @change="onFileChange" />
+						<input
+							type="file"
+							accept=".txt,.md,.pdf,.docx,.xls,.xlsx"
+							:disabled="uploading || myFiles.length >= MAX_KNOWLEDGE_FILES"
+							@change="onFileChange"
+						/>
 					</label>
+					<span class="file-quota">
+						{{ $t('knowledge.fileQuota', { used: myFiles.length, max: MAX_KNOWLEDGE_FILES }) }}
+					</span>
 					<span v-if="uploadResult" class="upload-ok">
 						{{ $t('knowledge.uploaded', { fileName: uploadResult.fileName, chunkCount: uploadResult.chunkCount }) }}
 					</span>
@@ -306,6 +317,11 @@ watch(isLoggedIn, (v) => {
 
 .upload-err {
 	font-size: 0.85rem;
+	color: var(--muted);
+}
+
+.file-quota {
+	font-size: 0.78rem;
 	color: var(--muted);
 }
 

@@ -13,4 +13,6 @@ public interface KnowledgeDocumentRepository extends JpaRepository<KnowledgeDocu
 	Optional<KnowledgeDocument> findByUserIdAndFileName(Long userId, String fileName);
 
 	Optional<KnowledgeDocument> findByIdAndUserId(Long id, Long userId);
+
+	long countByUserId(Long userId);
 }

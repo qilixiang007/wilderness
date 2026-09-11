@@ -15,11 +15,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * /api/ai/** 限流：登录用户按 userId、未登录按 IP，按接口分组分别定阈值，
- * 另加一个不分用户/IP 的全局兜底。必须注册在 AuthInterceptor 之后
- * （见 WebConfig 里的 order），这样 preHandle 时 AuthContext.currentUserId()
- * 已经可用。触发限流直接抛 ResponseStatusException(429)，交给全局异常处理器
- * 统一包装，不需要新增异常类型。
+ * 接口限流（/api/ai/** + /api/knowledge/upload）：登录用户按 userId、未登录按 IP，
+ * 按接口分组分别定阈值；/api/ai/** 另加一个不分用户/IP 的全局兜底（知识库上传不计入，
+ * 是完全不同的资源消耗类型）。必须注册在 AuthInterceptor 之后（见 WebConfig 里的 order），
+ * 这样 preHandle 时 AuthContext.currentUserId() 已经可用。触发限流直接抛
+ * ResponseStatusException(429)，交给全局异常处理器统一包装，不需要新增异常类型。
  */
 @Component
 public class RateLimitInterceptor implements HandlerInterceptor {
@@ -38,7 +38,10 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 			Map.entry("/api/ai/chat/stream", new int[]{10, 5}),
 			Map.entry("/api/ai/generate-celestial", new int[]{5, 2}),
 			Map.entry("/api/ai/explain/", new int[]{8, 4}),
-			Map.entry("/api/ai/chat", new int[]{10, 5})
+			Map.entry("/api/ai/chat", new int[]{10, 5}),
+			// /api/knowledge/upload 本身在 AuthInterceptor.REQUIRED 里强制登录，
+			// 未登录(IP)这档分支实际不会被触发，两个数字给一样的值即可。
+			Map.entry("/api/knowledge/upload", new int[]{5, 5})
 	);
 
 	private final SlidingWindowRateLimiter limiter;
@@ -63,22 +66,25 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 			return true;
 		}
 
+		// 全局兜底桶只统计 /api/ai/** 的量，知识库上传是完全不同的资源消耗类型，
+		// 不该跟 AI 请求量共用同一个计数器（否则上传高峰会误伤正常 AI 请求，反之亦然）。
+		boolean isAiPath = matched.getKey().startsWith("/api/ai/");
 		Long userId = AuthContext.currentUserId();
 		String identifier = userId != null ? "user:" + userId : "ip:" + clientIp(request);
 		int limit = userId != null ? matched.getValue()[0] : matched.getValue()[1];
 
 		try {
 			if (!limiter.tryAcquire("ai:ratelimit:" + identifier + ":" + matched.getKey(), limit, WINDOW_SECONDS)) {
-				throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "AI 请求过于频繁，请稍后再试");
+				throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "请求过于频繁，请稍后再试");
 			}
-			if (!limiter.tryAcquire("ai:ratelimit:global", GLOBAL_LIMIT, WINDOW_SECONDS)) {
+			if (isAiPath && !limiter.tryAcquire("ai:ratelimit:global", GLOBAL_LIMIT, WINDOW_SECONDS)) {
 				throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "系统当前 AI 请求量较大，请稍后再试");
 			}
 		} catch (ResponseStatusException e) {
 			throw e;
 		} catch (Exception e) {
 			log.warn("Redis 限流查询失败，按超限处理 path={}", request.getRequestURI(), e);
-			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI 服务暂时不可用，请稍后再试");
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "服务暂时不可用，请稍后再试");
 		}
 		return true;
 	}

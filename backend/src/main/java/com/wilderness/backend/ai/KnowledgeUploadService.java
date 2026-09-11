@@ -12,12 +12,15 @@ import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 用户上传文件入库:解析文本 → 切块 → 向量化 → 写入 ES 知识库。
@@ -29,6 +32,8 @@ import java.util.List;
 public class KnowledgeUploadService {
 
     private static final int MAX_TEXT_LENGTH = 1_000_000;
+    /** 个人知识库单用户最多文件数；重传已有同名文件（upsert 覆盖）不占用新名额。 */
+    private static final int MAX_FILES_PER_USER = 20;
 
     private final EmbeddingModel embeddingModel;
     private final DocumentTextExtractor extractor;
@@ -57,6 +62,11 @@ public class KnowledgeUploadService {
             throw new IllegalArgumentException("上传文件为空");
         }
         String fileName = file.getOriginalFilename() == null ? "unnamed" : file.getOriginalFilename();
+        Optional<KnowledgeDocument> existing = knowledgeDocumentRepository.findByUserIdAndFileName(userId, fileName);
+        if (existing.isEmpty() && knowledgeDocumentRepository.countByUserId(userId) >= MAX_FILES_PER_USER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "知识库文件数量已达上限（" + MAX_FILES_PER_USER + " 个），请先删除部分文件再上传");
+        }
         byte[] bytes = file.getBytes();
 
         Extracted extracted = extractor.extract(fileName, bytes);
@@ -84,15 +94,14 @@ public class KnowledgeUploadService {
         // qwen 嵌入单次 batch 上限 10，分批后再合并
         List<Embedding> embeddings = EmbeddingBatchHelper.embedAll(embeddingModel, segments);
         int written = ingestionService.ingestSegments(segments, embeddings, userId);
-        upsertDocument(userId, fileName, text.length(), written);
+        upsertDocument(existing, userId, fileName, text.length(), written);
         return new UploadResult(fileName, extracted.type(), text.length(), written, Instant.now().toEpochMilli());
     }
 
-    /** 文件清单 upsert:同用户同名文件复用同一行(重传覆盖 ES 后刷新统计)。 */
-    private void upsertDocument(Long userId, String fileName, long charCount, int chunkCount) {
-        KnowledgeDocument doc = knowledgeDocumentRepository.findByUserIdAndFileName(userId, fileName)
-                .orElseGet(() -> new KnowledgeDocument(userId, fileName,
-                        sanitizeSlug(fileName), extension(fileName), charCount, chunkCount));
+    /** 文件清单 upsert:同用户同名文件复用同一行(重传覆盖 ES 后刷新统计)。existing 是方法开头已查好的结果,不再重复查询。 */
+    private void upsertDocument(Optional<KnowledgeDocument> existing, Long userId, String fileName, long charCount, int chunkCount) {
+        KnowledgeDocument doc = existing.orElseGet(() -> new KnowledgeDocument(userId, fileName,
+                sanitizeSlug(fileName), extension(fileName), charCount, chunkCount));
         doc.refresh(charCount, chunkCount);
         knowledgeDocumentRepository.save(doc);
     }
