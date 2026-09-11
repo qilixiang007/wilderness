@@ -1,6 +1,11 @@
 <script setup>
 // 侧边栏模块：品牌区 + 三个功能模块入口。
 // 桌面端固定显示；移动端（<960px）作为抽屉，open 控制滑入滑出，点选模块后自动收起。
+// 「调用链路」只对登录用户展示（数据按账号隔离，未登录进去也只会被守卫送去登录页）。
+import { useAuth } from '../composables/useAuth'
+
+const { isLoggedIn } = useAuth()
+
 defineProps({
 	open: { type: Boolean, default: false }
 })
@@ -37,6 +42,9 @@ const emit = defineEmits(['close'])
 			</RouterLink>
 			<RouterLink class="sidebar-link" to="/history" @click="emit('close')">
 				{{ $t('nav.history') }}
+			</RouterLink>
+			<RouterLink v-if="isLoggedIn" class="sidebar-link" to="/traces" @click="emit('close')">
+				{{ $t('nav.traces') }}
 			</RouterLink>
 		</nav>
 
