@@ -8,6 +8,8 @@ import com.wilderness.backend.domain.KnowledgeDocument;
 import com.wilderness.backend.dto.KnowledgeFileDTO;
 import com.wilderness.backend.dto.KnowledgeFilePreviewDTO;
 import com.wilderness.backend.repository.KnowledgeDocumentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ import java.util.Objects;
 public class KnowledgeFileService {
 
 	/** 单次预览最多拉取的分块数,避免超大文件一次性拖回全部内容。 */
+	private static final Logger log = LoggerFactory.getLogger(KnowledgeFileService.class);
 	private static final int MAX_PREVIEW_CHUNKS = 300;
 
 	private final KnowledgeDocumentRepository repository;
@@ -54,15 +57,21 @@ public class KnowledgeFileService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "文件不存在"));
 		int size = Math.min(Math.max(doc.getChunkCount(), 1), MAX_PREVIEW_CHUNKS);
 
-		SearchResponse<Map> resp = es.search(s -> s
-						.index(indexManager.indexName())
-						.query(q -> q.bool(b -> b
-								.must(m -> m.term(t -> t.field("user_id").value(String.valueOf(userId))))
-								.must(m -> m.term(t -> t.field("file_name").value(doc.getFileName())))))
-						.sort(so -> so.field(f -> f.field("chunk_index").order(SortOrder.Asc)))
-						.size(size)
-						.source(so -> so.filter(f -> f.includes("content"))),
-				Map.class);
+		SearchResponse<Map> resp;
+		try {
+			resp = es.search(s -> s
+							.index(indexManager.indexName())
+							.query(q -> q.bool(b -> b
+									.must(m -> m.term(t -> t.field("user_id").value(String.valueOf(userId))))
+									.must(m -> m.term(t -> t.field("file_name").value(doc.getFileName())))))
+							.sort(so -> so.field(f -> f.field("chunk_index").order(SortOrder.Asc)))
+							.size(size)
+							.source(so -> so.filter(f -> f.includes("content"))),
+					Map.class);
+		} catch (Exception e) {
+			log.error("知识库预览检索失败 id={}", id, e);
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "知识库服务暂时不可用，请稍后再试");
+		}
 
 		List<String> chunks = resp.hits().hits().stream()
 				.map(h -> h.source())
@@ -79,11 +88,16 @@ public class KnowledgeFileService {
 		KnowledgeDocument doc = repository.findByIdAndUserId(id, userId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "文件不存在"));
 		// 先删 ES(按 user_id + file_name 精确匹配,只删当前用户的同名文件),refresh 立即生效
-		es.deleteByQuery(d -> d.index(indexManager.indexName())
-				.refresh(true)
-				.query(q -> q.bool(b -> b
-						.must(m -> m.term(t -> t.field("user_id").value(String.valueOf(userId))))
-						.must(m -> m.term(t -> t.field("file_name").value(doc.getFileName()))))));
+		try {
+			es.deleteByQuery(d -> d.index(indexManager.indexName())
+					.refresh(true)
+					.query(q -> q.bool(b -> b
+							.must(m -> m.term(t -> t.field("user_id").value(String.valueOf(userId))))
+							.must(m -> m.term(t -> t.field("file_name").value(doc.getFileName()))))));
+		} catch (Exception e) {
+			log.error("知识库文件删除失败 id={}", id, e);
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "知识库服务暂时不可用，请稍后再试");
+		}
 		repository.delete(doc);
 	}
 }

@@ -80,7 +80,7 @@ function send() {
 	if (!question || streaming.value) return
 	input.value = ''
 	const userMsg = { role: 'user', content: question }
-	messages.value.push(userMsg, { role: 'assistant', content: '', sources: [] })
+	messages.value.push(userMsg, { role: 'assistant', content: '', sources: [], retrievalDegraded: false })
 	// 取数组里那份响应式代理，而不是 push 前的裸对象引用，
 	// 否则后面对它的赋值不会被 Vue 追踪到，界面要等流结束才会一次性刷新。
 	const assistantMsg = messages.value[messages.value.length - 1]
@@ -89,6 +89,9 @@ function send() {
 
 	openChatStream(question, {
 		webEnabled: webSearch.value,
+		onRetrievalDegraded: () => {
+			assistantMsg.retrievalDegraded = true
+		},
 		onSources: (sources) => {
 			assistantMsg.sources = sources
 		},
@@ -183,6 +186,13 @@ function send() {
 							class="cursor"
 						>▍</span>
 					</div>
+
+					<p
+						v-if="msg.role === 'assistant' && msg.retrievalDegraded"
+						class="retrieval-degraded-hint"
+					>
+						{{ $t('common.retrievalDegradedHint') }}
+					</p>
 
 					<div
 						v-if="msg.role === 'assistant' && msg.sources && msg.sources.length"
@@ -399,6 +409,12 @@ function send() {
 	flex-wrap: wrap;
 	gap: 0.4rem;
 	margin-top: 0.5rem;
+}
+
+.retrieval-degraded-hint {
+	color: var(--danger, #e57373);
+	font-size: 0.78rem;
+	margin: 0.4rem 0 0;
 }
 
 .sources-label {

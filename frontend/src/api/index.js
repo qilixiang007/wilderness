@@ -65,15 +65,19 @@ async function request(path, { method = 'GET', body, headers, timeout = DEFAULT_
 
 /**
  * 打开 AI 问答的 SSE 流式连接(后端为 GET 端点,可用 EventSource)。
+ * - onRetrievalDegraded():知识库检索失败,回答未经知识库核实(仅降级时才会收到这个事件)
  * - onSources(sourceList):检索到的引文(先于回答推送)
  * - onDelta(text):回答的增量片段
  * - onDone():连接结束
  * 返回 EventSource,便于前端主动关闭。
  */
-export function openChatStream(question, { webEnabled = false, onSources, onDelta, onDone }) {
+export function openChatStream(question, { webEnabled = false, onRetrievalDegraded, onSources, onDelta, onDone }) {
 	const es = new EventSource(
 		`${BASE}/api/ai/chat/stream?question=${encodeURIComponent(question)}&webEnabled=${webEnabled}`
 	)
+	es.addEventListener('retrieval-status', () => {
+		onRetrievalDegraded?.()
+	})
 	es.addEventListener('sources', (e) => {
 		try {
 			onSources(JSON.parse(e.data))

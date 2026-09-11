@@ -60,7 +60,10 @@ public class AiController {
         return ApiResponse.ok(ragService.chat(request.question(), request.webSearchEnabled(), AuthContext.currentUserId()));
     }
 
-    /** AI 流式问答(SSE):先推 sources 事件,再逐段推 delta,结束自动关闭连接。 */
+    /**
+     * AI 流式问答(SSE):检索失败会先推 retrieval-status 事件(仅降级时才推),
+     * 再推 sources 事件,然后逐段推 delta,结束自动关闭连接。
+     */
     @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(@RequestParam("question") String question,
                                  @RequestParam(value = "webEnabled", defaultValue = "false") boolean webEnabled) {
@@ -74,6 +77,11 @@ public class AiController {
                     userId,
                     chunk -> safeSend(emitter, "delta", chunk),
                     sources -> safeSend(emitter, "sources", toJson(sources)),
+                    degraded -> {
+                        if (degraded) {
+                            safeSend(emitter, "retrieval-status", toJson(Collections.singletonMap("degraded", true)));
+                        }
+                    },
                     emitter::completeWithError,
                     emitter::complete));
         } catch (RejectedExecutionException e) {

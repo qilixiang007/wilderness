@@ -28,6 +28,7 @@ const explainStatus = ref('idle') // idle | loading | ready | error
 const explanation = ref('')
 const explainSources = ref([])
 const explainError = ref('')
+const explainRetrievalDegraded = ref(false)
 
 async function loadExplain() {
 	explainStatus.value = 'loading'
@@ -36,6 +37,7 @@ async function loadExplain() {
 		const data = await api.explain(route.params.slug)
 		explanation.value = data.answer
 		explainSources.value = dedupeSourcesBySlug(data.sources)
+		explainRetrievalDegraded.value = !!data.retrievalDegraded
 		explainStatus.value = 'ready'
 	} catch (e) {
 		explainError.value =
@@ -183,6 +185,9 @@ watch(() => route.params.slug, load, { immediate: true })
 
 				<article v-else class="info-card explain-card">
 					<MarkdownView :content="explanation" />
+					<p v-if="explainRetrievalDegraded" class="retrieval-degraded-hint">
+						{{ $t('common.retrievalDegradedHint') }}
+					</p>
 					<div v-if="explainSources.length" class="explain-sources">
 						<span class="sources-label">{{ $t('common.sources') }}</span>
 						<RouterLink
@@ -277,6 +282,12 @@ watch(() => route.params.slug, load, { immediate: true })
 	flex-wrap: wrap;
 	gap: 0.4rem;
 	margin-top: 0.9rem;
+}
+
+.retrieval-degraded-hint {
+	color: var(--danger, #e57373);
+	font-size: 0.78rem;
+	margin-top: 0.6rem;
 }
 
 .sources-label {

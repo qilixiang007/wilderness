@@ -2,5 +2,6 @@ package com.wilderness.backend.dto;
 
 import java.util.List;
 
-public record ExplainResponse(String answer, List<AiSource> sources) {
+/** retrievalDegraded=true 表示知识库检索失败，answer 是大模型不依赖检索资料直接给出的。 */
+public record ExplainResponse(String answer, List<AiSource> sources, boolean retrievalDegraded) {
 }

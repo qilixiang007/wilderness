@@ -64,8 +64,8 @@ class CompareServiceTest {
 
         when(objectService.findBySlug("earth")).thenReturn(detail("earth", "地球", "Earth"));
         when(objectService.findBySlug("mars")).thenReturn(detail("mars", "火星", "Mars"));
-        when(ragService.explain(eq("earth"), eq(42L))).thenReturn(new ExplainResponse("地球讲解", List.of()));
-        when(ragService.explain(eq("mars"), eq(42L))).thenReturn(new ExplainResponse("火星讲解", List.of()));
+        when(ragService.explain(eq("earth"), eq(42L))).thenReturn(new ExplainResponse("地球讲解", List.of(), false));
+        when(ragService.explain(eq("mars"), eq(42L))).thenReturn(new ExplainResponse("火星讲解", List.of(), false));
         when(assistant.compareOverview(anyString())).thenReturn("综合总结");
 
         CompareService service = new CompareService(ragService, objectService, assistant, mock(CompareHistoryService.class), executor, 60, 60);
@@ -88,7 +88,7 @@ class CompareServiceTest {
 
         when(objectService.findBySlug("earth")).thenReturn(detail("earth", "地球", "Earth"));
         when(objectService.findBySlug("ghost")).thenReturn(detail("ghost", "幽灵星", "Ghost"));
-        when(ragService.explain(eq("earth"), any())).thenReturn(new ExplainResponse("地球讲解", List.of()));
+        when(ragService.explain(eq("earth"), any())).thenReturn(new ExplainResponse("地球讲解", List.of(), false));
         when(ragService.explain(eq("ghost"), any())).thenThrow(new IllegalArgumentException("无资料"));
         when(assistant.compareOverview(anyString())).thenReturn("综合总结");
 
@@ -130,7 +130,7 @@ class CompareServiceTest {
         AiAssistant assistant = mock(AiAssistant.class);
 
         when(objectService.findBySlug(anyString())).thenReturn(detail("earth", "地球", "Earth"));
-        when(ragService.explain(anyString(), any())).thenReturn(new ExplainResponse("讲解", List.of()));
+        when(ragService.explain(anyString(), any())).thenReturn(new ExplainResponse("讲解", List.of(), false));
         when(assistant.compareOverview(anyString())).thenThrow(new RuntimeException("LLM 调用失败"));
 
         CompareService service = new CompareService(ragService, objectService, assistant, mock(CompareHistoryService.class), executor, 60, 60);
@@ -150,11 +150,11 @@ class CompareServiceTest {
 
         when(objectService.findBySlug("earth")).thenReturn(detail("earth", "地球", "Earth"));
         when(objectService.findBySlug("stuck")).thenReturn(detail("stuck", "卡死星", "Stuck"));
-        when(ragService.explain(eq("earth"), any())).thenReturn(new ExplainResponse("讲解", List.of()));
+        when(ragService.explain(eq("earth"), any())).thenReturn(new ExplainResponse("讲解", List.of(), false));
         CountDownLatch latch = new CountDownLatch(1);
         when(ragService.explain(eq("stuck"), any())).thenAnswer(inv -> {
             latch.await(10, TimeUnit.SECONDS); // 模拟挂死;1s 超时会先于这里的 10s 触发
-            return new ExplainResponse("不应到达", List.of());
+            return new ExplainResponse("不应到达", List.of(), false);
         });
         when(assistant.compareOverview(anyString())).thenReturn("综合总结");
 

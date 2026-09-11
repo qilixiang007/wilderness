@@ -14,6 +14,9 @@ defineProps({
 		<p v-if="item.error" class="load-error-text">{{ item.error }}</p>
 		<template v-else>
 			<MarkdownView :content="item.answer" />
+			<p v-if="item.retrievalDegraded" class="retrieval-degraded-hint">
+				{{ $t('common.retrievalDegradedHint') }}
+			</p>
 			<div v-if="item.sources && item.sources.length" class="explain-sources">
 				<span class="sources-label">{{ $t('common.sources') }}</span>
 				<RouterLink
@@ -33,6 +36,12 @@ defineProps({
 <style scoped>
 .load-error-text {
 	color: var(--muted);
+}
+
+.retrieval-degraded-hint {
+	color: var(--danger, #e57373);
+	font-size: 0.78rem;
+	margin-top: 0.6rem;
 }
 
 .explain-sources {

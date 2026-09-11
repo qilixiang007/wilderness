@@ -5,16 +5,22 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import com.wilderness.backend.ai.history.ConversationRecorder;
 import com.wilderness.backend.ai.langsmith.LangSmithTracer;
 import com.wilderness.backend.ai.langsmith.RunRef;
+import com.wilderness.backend.domain.CelestialObject;
 import com.wilderness.backend.dto.AiSource;
 import com.wilderness.backend.dto.ChatResponse;
 import com.wilderness.backend.dto.ExplainResponse;
+import com.wilderness.backend.repository.CelestialObjectRepository;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.rag.content.Content;
 import dev.langchain4j.rag.query.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -34,6 +40,7 @@ import java.util.function.Consumer;
 @ConditionalOnExpression("!('${wilderness.ai.dashscope.api-key:}'.trim().isEmpty())")
 public class RagService {
 
+    private static final Logger log = LoggerFactory.getLogger(RagService.class);
     private static final int EXCERPT_LEN = 120;
 
     private final HybridContentRetriever retriever;
@@ -43,6 +50,7 @@ public class RagService {
     private final LangSmithTracer tracer;
     private final String indexName;
     private final ObjectProvider<ConversationRecorder> recorderProvider;
+    private final CelestialObjectRepository celestialObjectRepository;
 
     public RagService(HybridContentRetriever retriever,
                       AiAssistant assistant,
@@ -50,7 +58,8 @@ public class RagService {
                       ElasticsearchIndexManager indexManager,
                       WebSearchService webSearchService,
                       LangSmithTracer tracer,
-                      ObjectProvider<ConversationRecorder> recorderProvider) {
+                      ObjectProvider<ConversationRecorder> recorderProvider,
+                      CelestialObjectRepository celestialObjectRepository) {
         this.retriever = retriever;
         this.assistant = assistant;
         this.es = es;
@@ -58,16 +67,26 @@ public class RagService {
         this.tracer = tracer;
         this.indexName = indexManager.indexName();
         this.recorderProvider = recorderProvider;
+        this.celestialObjectRepository = celestialObjectRepository;
     }
 
     public ChatResponse chat(String question, boolean webSearchEnabled, Long userId) throws Exception {
         RunRef run = tracer.start("rag.chat", "chain", Map.of("question", question, "webSearchEnabled", webSearchEnabled));
         try {
-            List<Content> contents = retrieveWithWeb(question, webSearchEnabled, userId);
+            List<Content> contents;
+            boolean retrievalDegraded;
+            try {
+                contents = retrieveWithWeb(question, webSearchEnabled, userId);
+                retrievalDegraded = false;
+            } catch (Exception e) {
+                log.warn("检索失败，降级为无知识库上下文回答 question={}", question, e);
+                contents = List.of();
+                retrievalDegraded = true;
+            }
             List<AiSource> sources = toSources(contents);
             String answer = assistant.chat(today(), question, formatSources(contents));
             recordConversation(userId, question, webSearchEnabled, answer, sources);
-            ChatResponse response = new ChatResponse(answer, sources);
+            ChatResponse response = new ChatResponse(answer, sources, retrievalDegraded);
             Map<String, Object> outputs = new LinkedHashMap<>();
             outputs.put("answer", answer);
             outputs.put("sourceCount", sources.size());
@@ -80,19 +99,29 @@ public class RagService {
     }
 
     /**
-     * 流式问答。检索完成后回调 onSources 返回引文,随后 onDelta 逐段推送回答内容,
-     * 全部完成后回调 onDone,出错时回调 onError。全程不阻塞调用线程。
+     * 流式问答。检索完成后先回调 onRetrievalStatus(true=检索失败已降级)，再回调 onSources
+     * 返回引文,随后 onDelta 逐段推送回答内容,全部完成后回调 onDone,出错时回调 onError。
+     * 全程不阻塞调用线程。
      */
     public void streamChat(String question,
                            boolean webSearchEnabled,
                            Long userId,
                            Consumer<String> onDelta,
                            Consumer<List<AiSource>> onSources,
+                           Consumer<Boolean> onRetrievalStatus,
                            Consumer<Throwable> onError,
                            Runnable onDone) {
         RunRef run = tracer.start("rag.stream_chat", "chain", Map.of("question", question, "webSearchEnabled", webSearchEnabled));
         try {
-            List<Content> contents = retrieveWithWeb(question, webSearchEnabled, userId);
+            List<Content> contents;
+            try {
+                contents = retrieveWithWeb(question, webSearchEnabled, userId);
+                onRetrievalStatus.accept(false);
+            } catch (Exception e) {
+                log.warn("检索失败，降级为无知识库上下文回答 question={}", question, e);
+                contents = List.of();
+                onRetrievalStatus.accept(true);
+            }
             List<AiSource> sources = toSources(contents);
             onSources.accept(sources);
             assistant.chatStream(today(), question, formatSources(contents))
@@ -137,43 +166,73 @@ public class RagService {
         return contents;
     }
 
+    /** 单独抽成方法：docs 只在这个方法内被 forEach lambda 捕获，赋值一次，天然有效 final。 */
+    private List<Map> searchExplainDocs(String slug, Long userId) throws Exception {
+        SearchResponse<Map> resp = es.search(s -> s
+                        .index(indexName)
+                        .query(q -> q.bool(b -> b
+                                .must(m -> m.term(t -> t.field("slug").value(slug)))
+                                .filter(userFilter(userId))))
+                        .size(50)
+                        .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name", "chunk_index"))),
+                Map.class);
+
+        List<Map> docs = new ArrayList<>();
+        resp.hits().hits().forEach(h -> {
+            if (h.source() != null) {
+                docs.add(h.source());
+            }
+        });
+        return docs;
+    }
+
     public ExplainResponse explain(String slug, Long userId) throws Exception {
         RunRef run = tracer.start("rag.explain", "chain", Map.of("slug", slug));
         try {
-            SearchResponse<Map> resp = es.search(s -> s
-                            .index(indexName)
-                            .query(q -> q.bool(b -> b
-                                    .must(m -> m.term(t -> t.field("slug").value(slug)))
-                                    .filter(userFilter(userId))))
-                            .size(50)
-                            .source(so -> so.filter(f -> f.includes("content", "slug", "type", "zh_name", "en_name", "file_name", "chunk_index"))),
-                    Map.class);
+            List<Map> docs;
+            boolean retrievalDegraded;
+            try {
+                docs = searchExplainDocs(slug, userId);
+                retrievalDegraded = false;
+            } catch (Exception e) {
+                log.warn("检索失败，尝试用天体目录数据降级 slug={}", slug, e);
+                docs = List.of();
+                retrievalDegraded = true;
+            }
 
-            List<Map> docs = new ArrayList<>();
-            resp.hits().hits().forEach(h -> {
-                if (h.source() != null) {
-                    docs.add(h.source());
-                }
-            });
-            if (docs.isEmpty()) {
+            if (docs.isEmpty() && !retrievalDegraded) {
                 throw new IllegalArgumentException("知识库中未找到 slug=" + slug + " 的资料");
             }
 
-            Map first = docs.get(0);
-            String zhName = str(first.get("zh_name"));
-            String enName = str(first.get("en_name"));
-            String sourcesText = docs.stream()
-                    .map(d -> "- " + str(d.get("content")))
-                    .reduce((a, b) -> a + "\n\n" + b)
-                    .orElse("");
+            String zhName;
+            String enName;
+            String sourcesText;
+            List<AiSource> sources;
+            if (!docs.isEmpty()) {
+                Map first = docs.get(0);
+                zhName = str(first.get("zh_name"));
+                enName = str(first.get("en_name"));
+                sourcesText = docs.stream()
+                        .map(d -> "- " + str(d.get("content")))
+                        .reduce((a, b) -> a + "\n\n" + b)
+                        .orElse("");
+                sources = docs.stream()
+                        .map(d -> new AiSource(str(d.get("zh_name")), str(d.get("slug")),
+                                str(d.get("type")), abbreviate(str(d.get("content"))),
+                                (Integer) d.get("chunk_index")))
+                        .toList();
+            } else {
+                // ES 挂了：从跟 ES 无关的 MySQL 天体目录兜底拿名字，没有正文资料可用。
+                CelestialObject object = celestialObjectRepository.findBySlug(slug)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "天体不存在: " + slug));
+                zhName = object.getZhName();
+                enName = object.getEnName();
+                sourcesText = "";
+                sources = List.of();
+            }
 
             String answer = assistant.explain(zhName, enName, sourcesText);
-            List<AiSource> sources = docs.stream()
-                    .map(d -> new AiSource(str(d.get("zh_name")), str(d.get("slug")),
-                            str(d.get("type")), abbreviate(str(d.get("content"))),
-                            (Integer) d.get("chunk_index")))
-                    .toList();
-            ExplainResponse response = new ExplainResponse(answer, sources);
+            ExplainResponse response = new ExplainResponse(answer, sources, retrievalDegraded);
             Map<String, Object> outputs = new LinkedHashMap<>();
             outputs.put("answer", answer);
             outputs.put("sourceCount", sources.size());

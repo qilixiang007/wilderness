@@ -116,7 +116,8 @@ public class CompareService {
         try {
             ObjectDetailDTO object = celestialObjectService.findBySlug(slug);
             ExplainResponse explain = ragService.explain(slug, userId);
-            return CompareItemResult.ok(slug, object.zhName(), object.enName(), explain.answer(), explain.sources());
+            return CompareItemResult.ok(slug, object.zhName(), object.enName(), explain.answer(), explain.sources(),
+                    explain.retrievalDegraded());
         } catch (IllegalArgumentException e) {
             return CompareItemResult.failed(slug, "该天体暂无知识库资料,无法生成讲解");
         } catch (ResponseStatusException e) {
