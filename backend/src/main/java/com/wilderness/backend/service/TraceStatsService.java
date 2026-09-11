@@ -156,7 +156,13 @@ public class TraceStatsService {
 	/** 时间范围内的 span；rootOnly 只要根 span；requiredField 要求该字段存在（保证聚合对象非空）。 */
 	private Query spansQuery(long from, long to, boolean rootOnly, String requiredField) {
 		return Query.of(q -> q.bool(b -> {
-			b.filter(f -> f.range(rg -> rg.number(n -> n.field("start_time").gte((double) from).lt((double) to))));
+			// 必须用 date range + 字符串毫秒值：number range 会把 long 转成 double，序列化成 1.7E12 这种科学计数法，
+			// epoch_millis 格式解析失败，整个查询 all shards failed（已用 curl 复现）
+			b.filter(f -> f.range(rg -> rg.date(d -> d
+					.field("start_time")
+					.gte(String.valueOf(from))
+					.lt(String.valueOf(to))
+					.format("epoch_millis"))));
 			b.filter(f -> f.exists(e -> e.field(requiredField)));
 			if (rootOnly) {
 				b.filter(f -> f.term(tm -> tm.field("is_root").value(true)));

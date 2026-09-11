@@ -172,15 +172,16 @@ public class TraceQueryService {
 			b.filter(f -> f.term(t -> t.field("user_id").value(String.valueOf(scopeUserId))));
 		}
 		if (c.from() != null || c.to() != null) {
-			b.filter(f -> f.range(r -> r.number(n -> {
-				n.field("start_time");
+			// date range + 字符串毫秒值（number range 会序列化成科学计数法，epoch_millis 解析失败）
+			b.filter(f -> f.range(r -> r.date(d -> {
+				d.field("start_time").format("epoch_millis");
 				if (c.from() != null) {
-					n.gte((double) c.from());
+					d.gte(String.valueOf(c.from()));
 				}
 				if (c.to() != null) {
-					n.lt((double) c.to());
+					d.lt(String.valueOf(c.to()));
 				}
-				return n;
+				return d;
 			})));
 		}
 		return b;
