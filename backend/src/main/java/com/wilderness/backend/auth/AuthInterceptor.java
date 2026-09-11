@@ -30,6 +30,8 @@ public class AuthInterceptor implements HandlerInterceptor {
 			"/api/knowledge/reingest",
 			"/api/history/**",
 			"/api/agents/**",
+			"/api/traces",
+			"/api/traces/**",
 			"/api/auth/logout",
 			"/api/auth/me",
 			"/api/auth/change-password"
