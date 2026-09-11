@@ -4,6 +4,8 @@ import com.wilderness.backend.config.AuthProperties;
 import com.wilderness.backend.domain.User;
 import com.wilderness.backend.dto.UserDTO;
 import com.wilderness.backend.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,12 +19,17 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class AuthService {
 
+	private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
 	private final UserRepository userRepository;
 	private final VerifyCodeService verifyCodeService;
 	private final SessionService sessionService;
 	private final AuthProperties props;
 	private final LoginAttemptService loginAttemptService;
 	private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+	/** 管理员邮箱：不落库，登录/查询用户信息时按邮箱动态判定。 */
+	private static final String ADMIN_EMAIL = "1105341151@qq.com";
 
 	public AuthService(UserRepository userRepository,
 			VerifyCodeService verifyCodeService,
@@ -121,12 +128,23 @@ public class AuthService {
 	public UserDTO me(Long userId) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "会话已失效，请重新登录"));
-		return new UserDTO(user.getId(), user.getEmail());
+		return new UserDTO(user.getId(), user.getEmail(), isAdmin(user.getEmail()));
+	}
+
+	/** 管理员身份不落库，登录时按邮箱动态判定。 */
+	public boolean isAdmin(String email) {
+		return email != null && email.equalsIgnoreCase(ADMIN_EMAIL);
 	}
 
 	private LoginResult loginResult(User user) {
-		String token = sessionService.createSession(user.getId());
-		return new LoginResult(token, new UserDTO(user.getId(), user.getEmail()));
+		String token;
+		try {
+			token = sessionService.createSession(user.getId());
+		} catch (Exception e) {
+			log.error("创建会话失败 userId={}", user.getId(), e);
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "登录服务暂时不可用，请稍后再试");
+		}
+		return new LoginResult(token, new UserDTO(user.getId(), user.getEmail(), isAdmin(user.getEmail())));
 	}
 
 	private void requireEmail(String email) {

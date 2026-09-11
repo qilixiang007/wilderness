@@ -212,6 +212,14 @@ export const api = {
 	getGenerationHistory: (page = 0, size = 20) => request(`/api/history/generation?page=${page}&size=${size}`),
 	getGenerationHistoryDetail: (id) => request(`/api/history/generation/${id}`),
 	deleteGenerationHistory: (id) => request(`/api/history/generation/${id}`, { method: 'DELETE' }),
+	setGenerationVisibility: (id, isPublic) =>
+		request(`/api/history/generation/${id}/visibility`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ isPublic })
+		}),
+	// —— 公开广场（匿名可访问）——
+	getGallery: (page = 0, size = 20) => request(`/api/gallery?page=${page}&size=${size}`),
 	// —— 自定义智能体（按用户隔离）——
 	getAgents: () => request('/api/agents'),
 	createAgent: (payload) =>

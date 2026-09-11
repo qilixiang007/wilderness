@@ -21,7 +21,9 @@ export default {
 		viewDetails: 'View details',
 		sources: 'Sources',
 		loadFailed: 'Failed to load. Please retry.',
-		objects: '{n} objects'
+		objects: '{n} objects',
+		cancel: 'Cancel',
+		confirmDelete: 'Confirm delete'
 	},
 	home: {
 		heroKicker: 'A FIELD GUIDE TO THE COSMOS',
@@ -88,6 +90,7 @@ export default {
 		noFiles: 'No files uploaded yet',
 		deleteFile: 'Delete',
 		deleteFailed: 'Delete failed.',
+		deleteFileConfirm: 'Delete this file? The matching content will also be removed from the knowledge base. This cannot be undone.',
 		chars: 'chars',
 		chunks: 'chunks',
 		previewFile: 'Preview',
@@ -138,6 +141,7 @@ export default {
 		sources: 'Reference objects',
 		imageHint: 'Procedurally rendered from parameters (upgrades to an AI image when an image API is configured)',
 		imageTemporaryHint: 'This is a temporary link that expires in 24 hours — save it yourself; favoriting will try to store a permanent copy.',
+		generationFailedImageHint: 'Generation failed — this image is the default SVG placeholder, not the actual result.',
 		satellitesTruncated: 'The description mentions {n} moons; only the first {max} are rendered due to the display limit.',
 		favorite: '☆ Favorite',
 		unfavorite: '★ Favorited',
@@ -215,6 +219,15 @@ export default {
 		empty: 'Select 2~4 objects from the catalog or search results first.',
 		backToPick: 'Go pick objects'
 	},
+	gallery: {
+		kicker: 'COMMUNITY CREATIONS',
+		title: 'Public Gallery',
+		intro: 'Browse celestial objects the community created and shared publicly.',
+		empty: 'No public objects yet — create one in Celestial Generator and make it public.',
+		viewMore: 'View more',
+		takedown: 'Take down',
+		takedownFailed: 'Failed to take down, please retry'
+	},
 	favorites: {
 		kicker: 'COLLECTION',
 		title: 'Favorites',
@@ -254,11 +267,17 @@ export default {
 		generationReference: 'Retrieved reference material',
 		generationRawResponse: 'Raw model response',
 		generationRunId: 'LangSmith Run ID',
+		generationMakePublic: 'Make public',
+		generationMakePrivate: 'Make private',
+		generationVisibilityFailed: 'Failed to change visibility, please retry',
 		offline: 'Backend unreachable; history unavailable.',
 		loadFailed: 'Failed to load. Please retry.',
 		loadMore: 'Load more',
 		delete: 'Delete',
 		deleteFailed: 'Delete failed.',
+		deleteConfirm: 'Delete this conversation? This cannot be undone.',
+		deleteCompareConfirm: 'Delete this comparison? This cannot be undone.',
+		deleteGenerationConfirm: 'Delete this generated body? This cannot be undone.',
 		webSearch: 'web',
 		groupToday: 'Today',
 		groupYesterday: 'Yesterday'

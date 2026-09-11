@@ -6,9 +6,11 @@ import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, ApiUnavailableError } from '../api'
 import { useAuth } from '../composables/useAuth'
+import { useConfirm } from '../composables/useConfirm'
 
 const { t, tm } = useI18n()
 const { isLoggedIn } = useAuth()
+const { confirm } = useConfirm()
 
 // 知识库工作原理科普：query → 检索 → AI 作答，给非专业用户看的简化流程
 const flowSteps = tm('knowledge.flowSteps')
@@ -56,6 +58,7 @@ async function loadFiles() {
 
 async function deleteFile(file) {
 	if (deletingId.value) return
+	if (!(await confirm(t('knowledge.deleteFileConfirm')))) return
 	deletingId.value = file.id
 	try {
 		await api.deleteKnowledgeFile(file.id)

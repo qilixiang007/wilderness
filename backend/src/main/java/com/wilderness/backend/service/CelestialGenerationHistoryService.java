@@ -2,7 +2,9 @@ package com.wilderness.backend.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wilderness.backend.auth.AuthService;
 import com.wilderness.backend.domain.CelestialGenerationHistory;
+import com.wilderness.backend.domain.User;
 import com.wilderness.backend.dto.AgentStep;
 import com.wilderness.backend.dto.AiSource;
 import com.wilderness.backend.dto.CelestialGenerationDetailDTO;
@@ -11,6 +13,7 @@ import com.wilderness.backend.dto.CelestialGenerationSummaryDTO;
 import com.wilderness.backend.dto.GenerationResult;
 import com.wilderness.backend.dto.RenderSpec;
 import com.wilderness.backend.repository.CelestialGenerationHistoryRepository;
+import com.wilderness.backend.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -37,12 +40,16 @@ public class CelestialGenerationHistoryService {
 	private final CelestialGenerationHistoryRepository repository;
 	private final ObjectMapper objectMapper;
 	private final GeneratedImageStorageService imageStorageService;
+	private final UserRepository userRepository;
+	private final AuthService authService;
 
 	public CelestialGenerationHistoryService(CelestialGenerationHistoryRepository repository, ObjectMapper objectMapper,
-			GeneratedImageStorageService imageStorageService) {
+			GeneratedImageStorageService imageStorageService, UserRepository userRepository, AuthService authService) {
 		this.repository = repository;
 		this.objectMapper = objectMapper;
 		this.imageStorageService = imageStorageService;
+		this.userRepository = userRepository;
+		this.authService = authService;
 	}
 
 	/**
@@ -99,11 +106,32 @@ public class CelestialGenerationHistoryService {
 		}
 	}
 
+	/**
+	 * 切换可见性：本人可改自己的记录；非本人时若当前用户是管理员，可改任意记录（用于广场下架）。
+	 * 都不满足则 404，不暴露记录是否存在。
+	 */
+	@Transactional
+	public boolean setVisibility(Long userId, Long id, boolean isPublic) {
+		CelestialGenerationHistory history = repository.findByIdAndUserId(id, userId).orElse(null);
+		if (history == null) {
+			User currentUser = userRepository.findById(userId).orElse(null);
+			boolean admin = currentUser != null && authService.isAdmin(currentUser.getEmail());
+			if (!admin) {
+				throw new ResponseStatusException(HttpStatus.NOT_FOUND, "记录不存在");
+			}
+			history = repository.findById(id)
+					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "记录不存在"));
+		}
+		history.setPublic(isPublic);
+		repository.save(history);
+		return history.isPublic();
+	}
+
 	private CelestialGenerationSummaryDTO toSummaryDto(CelestialGenerationHistory history) {
 		return new CelestialGenerationSummaryDTO(
 				history.getId(), history.getName(), history.getType(), history.getImageUrl(),
 				history.isImageTemporary(), fromJson(history.getRenderJson(), RenderSpec.class), history.getAgentName(),
-				history.isSuccess(), history.getCreatedAt());
+				history.isSuccess(), history.getCreatedAt(), history.isPublic());
 	}
 
 	private CelestialGenerationDetailDTO toDetailDto(CelestialGenerationHistory history) {

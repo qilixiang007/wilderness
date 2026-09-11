@@ -4,10 +4,13 @@ import com.wilderness.backend.auth.AuthContext;
 import com.wilderness.backend.common.ApiResponse;
 import com.wilderness.backend.dto.CelestialGenerationDetailDTO;
 import com.wilderness.backend.dto.CelestialGenerationPageDTO;
+import com.wilderness.backend.dto.VisibilityRequest;
 import com.wilderness.backend.service.CelestialGenerationHistoryService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,5 +46,12 @@ public class CelestialGenerationHistoryController {
 	public ApiResponse<Void> delete(@PathVariable Long id) {
 		celestialGenerationHistoryService.delete(AuthContext.currentUserId(), id);
 		return ApiResponse.ok("已删除", null);
+	}
+
+	/** 切换公开/私密；本人或管理员可操作，管理员用它对广场内容做事后下架。 */
+	@PatchMapping("/{id}/visibility")
+	public ApiResponse<Boolean> setVisibility(@PathVariable Long id, @RequestBody VisibilityRequest request) {
+		boolean isPublic = celestialGenerationHistoryService.setVisibility(AuthContext.currentUserId(), id, request.isPublic());
+		return ApiResponse.ok(isPublic);
 	}
 }

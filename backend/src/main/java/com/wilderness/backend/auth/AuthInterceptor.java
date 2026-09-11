@@ -25,7 +25,6 @@ public class AuthInterceptor implements HandlerInterceptor {
 
 	private static final String[] REQUIRED = {
 			"/api/favorites/**",
-			"/api/generated-images/**",
 			"/api/knowledge/upload",
 			"/api/knowledge/files/**",
 			"/api/knowledge/reingest",

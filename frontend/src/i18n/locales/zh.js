@@ -21,7 +21,9 @@ export default {
 		viewDetails: '查看详情',
 		sources: '资料来源',
 		loadFailed: '加载失败，请重试。',
-		objects: '{n} 个天体'
+		objects: '{n} 个天体',
+		cancel: '取消',
+		confirmDelete: '确认删除'
 	},
 	home: {
 		heroKicker: '旷野观星 · 天文科普',
@@ -88,6 +90,7 @@ export default {
 		noFiles: '还没有上传过文件',
 		deleteFile: '删除',
 		deleteFailed: '删除失败',
+		deleteFileConfirm: '确定删除这个文件吗？知识库里对应的内容也会一并清除，删除后不可恢复。',
 		chars: '字',
 		chunks: '块',
 		previewFile: '预览',
@@ -138,6 +141,7 @@ export default {
 		sources: '参考的真实天体',
 		imageHint: '图片由参数化渲染生成（配置文生图后升级为 AI 生成图）',
 		imageTemporaryHint: '该图为临时链接，24 小时后失效，请自行保存；收藏可尝试自动转存。',
+		generationFailedImageHint: '生成失败，该图片为 SVG 默认渲染，不代表实际生成结果。',
 		satellitesTruncated: '描述中提到了 {n} 颗卫星，受画面展示上限限制，仅渲染前 {max} 颗。',
 		favorite: '☆ 收藏',
 		unfavorite: '★ 已收藏',
@@ -215,6 +219,15 @@ export default {
 		empty: '请先在天体列表或搜索结果中勾选 2~4 个天体。',
 		backToPick: '去挑选天体'
 	},
+	gallery: {
+		kicker: '社区创作',
+		title: '公开广场',
+		intro: '来看看大家用天体生成 Agent 创作并公开分享的天体。',
+		empty: '广场还没有公开的天体，去「天体生成」创作一个并设为公开吧。',
+		viewMore: '查看更多',
+		takedown: '下架',
+		takedownFailed: '下架失败，请重试'
+	},
 	favorites: {
 		kicker: '收藏记录',
 		title: '我的收藏',
@@ -254,11 +267,17 @@ export default {
 		generationReference: '检索到的参考资料原文',
 		generationRawResponse: '模型原始返回',
 		generationRunId: 'LangSmith Run ID',
+		generationMakePublic: '设为公开',
+		generationMakePrivate: '设为私密',
+		generationVisibilityFailed: '切换可见性失败，请重试',
 		offline: '后端不可用，无法加载对话历史。',
 		loadFailed: '加载失败，请重试。',
 		loadMore: '加载更多',
 		delete: '删除',
 		deleteFailed: '删除失败',
+		deleteConfirm: '确定删除这条对话记录吗？删除后不可恢复。',
+		deleteCompareConfirm: '确定删除这条对比记录吗？删除后不可恢复。',
+		deleteGenerationConfirm: '确定删除这个生成天体记录吗？删除后不可恢复。',
 		webSearch: '联网',
 		groupToday: '今天',
 		groupYesterday: '昨天'
