@@ -1,5 +1,10 @@
 package com.wilderness.backend.ai;
 
+import com.wilderness.backend.ai.trace.RunTypes;
+import com.wilderness.backend.ai.trace.Span;
+import com.wilderness.backend.ai.trace.TraceAttrs;
+import com.wilderness.backend.ai.trace.TraceScope;
+import com.wilderness.backend.ai.trace.Tracer;
 import com.wilderness.backend.dto.CompareItemResult;
 import com.wilderness.backend.dto.ExplainResponse;
 import com.wilderness.backend.dto.ObjectDetailDTO;
@@ -16,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -38,6 +44,7 @@ public class CompareService {
     private final CelestialObjectService celestialObjectService;
     private final AiAssistant assistant;
     private final CompareHistoryService compareHistoryService;
+    private final Tracer tracer;
     private final Executor aiCompareExecutor;
     private final long itemTimeoutSeconds;
     private final long overviewTimeoutSeconds;
@@ -47,8 +54,10 @@ public class CompareService {
                           CelestialObjectService celestialObjectService,
                           AiAssistant assistant,
                           CompareHistoryService compareHistoryService,
+                          Tracer tracer,
                           @Qualifier("aiCompareExecutor") Executor aiCompareExecutor) {
-        this(ragService, celestialObjectService, assistant, compareHistoryService, aiCompareExecutor, DEFAULT_TIMEOUT_SECONDS, DEFAULT_TIMEOUT_SECONDS);
+        this(ragService, celestialObjectService, assistant, compareHistoryService, tracer, aiCompareExecutor,
+                DEFAULT_TIMEOUT_SECONDS, DEFAULT_TIMEOUT_SECONDS);
     }
 
     /** 供测试注入更短的超时,避免真实等待 60s 才能验证超时降级路径。 */
@@ -56,6 +65,7 @@ public class CompareService {
                    CelestialObjectService celestialObjectService,
                    AiAssistant assistant,
                    CompareHistoryService compareHistoryService,
+                   Tracer tracer,
                    Executor aiCompareExecutor,
                    long itemTimeoutSeconds,
                    long overviewTimeoutSeconds) {
@@ -63,6 +73,7 @@ public class CompareService {
         this.celestialObjectService = celestialObjectService;
         this.assistant = assistant;
         this.compareHistoryService = compareHistoryService;
+        this.tracer = tracer;
         this.aiCompareExecutor = aiCompareExecutor;
         this.itemTimeoutSeconds = itemTimeoutSeconds;
         this.overviewTimeoutSeconds = overviewTimeoutSeconds;
@@ -80,10 +91,14 @@ public class CompareService {
                               Consumer<String> onOverview,
                               Consumer<Throwable> onError,
                               Runnable onDone) {
-        try {
+        Span root = tracer.start("compare", RunTypes.CHAIN, TraceAttrs.of("slugs", slugs), userId);
+        // 线程池带 TracingTaskDecorator：supplyAsync 提交时捕获 root，并行的 explain 都成为它的子树
+        try (TraceScope ignored = root.makeCurrent()) {
             List<String> uniq = List.copyOf(new LinkedHashSet<>(slugs));
             if (uniq.size() < 2) {
-                onError.accept(new IllegalArgumentException("请至少选择 2 个不同的天体"));
+                IllegalArgumentException error = new IllegalArgumentException("请至少选择 2 个不同的天体");
+                root.fail(error);
+                onError.accept(error);
                 return;
             }
 
@@ -104,9 +119,13 @@ public class CompareService {
                     .exceptionally(e -> null)
                     .join();
             compareHistoryService.save(userId, items, overview);
+            long failed = items.stream().filter(i -> i.error() != null).count();
+            root.end(TraceAttrs.of("okCount", items.size() - failed, "failedCount", failed,
+                    "overviewGenerated", overview != null));
             onOverview.accept(overview);
             onDone.run();
         } catch (Exception e) {
+            root.fail(e);
             onError.accept(e);
         }
     }
@@ -137,6 +156,15 @@ public class CompareService {
         String articles = ok.stream()
                 .map(i -> "§ " + i.zhName() + "\n" + i.answer())
                 .collect(Collectors.joining("\n\n"));
-        return CompletableFuture.supplyAsync(() -> assistant.compareOverview(articles), aiCompareExecutor);
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return tracer.inChild("compare.overview", RunTypes.CHAIN,
+                        TraceAttrs.of("articleCount", ok.size()),
+                        () -> assistant.compareOverview(articles),
+                        overview -> TraceAttrs.of("overview", overview));
+            } catch (Exception e) {
+                throw new CompletionException(e);
+            }
+        }, aiCompareExecutor);
     }
 }

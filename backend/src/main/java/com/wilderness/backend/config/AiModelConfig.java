@@ -1,6 +1,8 @@
 package com.wilderness.backend.config;
 
 import com.wilderness.backend.ai.AiAssistant;
+import com.wilderness.backend.ai.trace.TracingChatModelListener;
+import com.wilderness.backend.ai.trace.TracingEmbeddingModelListener;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -15,6 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import java.util.List;
 
 /**
  * LLM 模型 Bean。
@@ -29,7 +32,8 @@ public class AiModelConfig {
     public ChatModel chatModel(
             @Value("${wilderness.ai.dashscope.base-url}") String baseUrl,
             @Value("${wilderness.ai.dashscope.api-key}") String apiKey,
-            @Value("${wilderness.ai.dashscope.chat-model}") String modelName) {
+            @Value("${wilderness.ai.dashscope.chat-model}") String modelName,
+            TracingChatModelListener tracingListener) {
         return OpenAiChatModel.builder()
                 .baseUrl(baseUrl)
                 .apiKey(apiKey)
@@ -38,6 +42,7 @@ public class AiModelConfig {
                 // 多天体对比编排层用 orTimeout(60s) 兜底,底层超时须更短,
                 // 否则线程池的线程会被卡住不释放,而不是真正按时归还。
                 .timeout(Duration.ofSeconds(45))
+                .listeners(List.of(tracingListener))
                 .build();
     }
 
@@ -47,12 +52,14 @@ public class AiModelConfig {
             @Value("${wilderness.ai.dashscope.base-url}") String baseUrl,
             @Value("${wilderness.ai.dashscope.api-key}") String apiKey,
             @Value("${wilderness.ai.dashscope.embedding-model}") String modelName,
-            @Value("${wilderness.ai.dashscope.embedding-dimensions}") Integer dimensions) {
+            @Value("${wilderness.ai.dashscope.embedding-dimensions}") Integer dimensions,
+            TracingEmbeddingModelListener tracingListener) {
         return OpenAiEmbeddingModel.builder()
                 .baseUrl(baseUrl)
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .dimensions(dimensions)
+                .listeners(List.of(tracingListener))
                 .build();
     }
 
@@ -61,12 +68,14 @@ public class AiModelConfig {
     public StreamingChatModel streamingChatModel(
             @Value("${wilderness.ai.dashscope.base-url}") String baseUrl,
             @Value("${wilderness.ai.dashscope.api-key}") String apiKey,
-            @Value("${wilderness.ai.dashscope.chat-model}") String modelName) {
+            @Value("${wilderness.ai.dashscope.chat-model}") String modelName,
+            TracingChatModelListener tracingListener) {
         return OpenAiStreamingChatModel.builder()
                 .baseUrl(baseUrl)
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .temperature(0.2)
+                .listeners(List.of(tracingListener))
                 .build();
     }
 
@@ -79,12 +88,14 @@ public class AiModelConfig {
     public ChatModel agentChatModel(
             @Value("${wilderness.ai.dashscope.base-url}") String baseUrl,
             @Value("${wilderness.ai.dashscope.api-key}") String apiKey,
-            @Value("${wilderness.ai.dashscope.chat-model}") String modelName) {
+            @Value("${wilderness.ai.dashscope.chat-model}") String modelName,
+            TracingChatModelListener tracingListener) {
         return OpenAiChatModel.builder()
                 .baseUrl(baseUrl)
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .temperature(0.7)
+                .listeners(List.of(tracingListener))
                 .build();
     }
 

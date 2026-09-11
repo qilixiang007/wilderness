@@ -1,6 +1,11 @@
 package com.wilderness.backend.ai;
 
 import com.wilderness.backend.ai.DocumentTextExtractor.Extracted;
+import com.wilderness.backend.ai.trace.RunTypes;
+import com.wilderness.backend.ai.trace.Span;
+import com.wilderness.backend.ai.trace.TraceAttrs;
+import com.wilderness.backend.ai.trace.TraceScope;
+import com.wilderness.backend.ai.trace.Tracer;
 import com.wilderness.backend.domain.KnowledgeDocument;
 import com.wilderness.backend.dto.UploadResult;
 import com.wilderness.backend.repository.KnowledgeDocumentRepository;
@@ -39,6 +44,7 @@ public class KnowledgeUploadService {
     private final DocumentTextExtractor extractor;
     private final KnowledgeIngestionService ingestionService;
     private final KnowledgeDocumentRepository knowledgeDocumentRepository;
+    private final Tracer tracer;
     private final int chunkSize;
     private final int chunkOverlap;
 
@@ -46,12 +52,14 @@ public class KnowledgeUploadService {
                                   DocumentTextExtractor extractor,
                                   KnowledgeIngestionService ingestionService,
                                   KnowledgeDocumentRepository knowledgeDocumentRepository,
+                                  Tracer tracer,
                                   @Value("${wilderness.ai.rag.chunk-size}") int chunkSize,
                                   @Value("${wilderness.ai.rag.chunk-overlap}") int chunkOverlap) {
         this.embeddingModel = embeddingModel;
         this.extractor = extractor;
         this.ingestionService = ingestionService;
         this.knowledgeDocumentRepository = knowledgeDocumentRepository;
+        this.tracer = tracer;
         this.chunkSize = chunkSize;
         this.chunkOverlap = chunkOverlap;
     }
@@ -62,6 +70,19 @@ public class KnowledgeUploadService {
             throw new IllegalArgumentException("上传文件为空");
         }
         String fileName = file.getOriginalFilename() == null ? "unnamed" : file.getOriginalFilename();
+        Span root = tracer.start("knowledge.upload", RunTypes.CHAIN,
+                TraceAttrs.of("fileName", fileName, "sizeBytes", file.getSize()), userId);
+        try (TraceScope ignored = root.makeCurrent()) {
+            UploadResult result = doUpload(file, fileName, userId);
+            root.end(TraceAttrs.of("type", result.type(), "charCount", result.charCount(), "chunkCount", result.chunkCount()));
+            return result;
+        } catch (Exception e) {
+            root.fail(e);
+            throw e;
+        }
+    }
+
+    private UploadResult doUpload(MultipartFile file, String fileName, Long userId) throws Exception {
         Optional<KnowledgeDocument> existing = knowledgeDocumentRepository.findByUserIdAndFileName(userId, fileName);
         if (existing.isEmpty() && knowledgeDocumentRepository.countByUserId(userId) >= MAX_FILES_PER_USER) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -69,7 +90,10 @@ public class KnowledgeUploadService {
         }
         byte[] bytes = file.getBytes();
 
-        Extracted extracted = extractor.extract(fileName, bytes);
+        Extracted extracted = tracer.inChild("document.extract", RunTypes.PARSER,
+                TraceAttrs.of("fileName", fileName, "sizeBytes", bytes.length),
+                () -> extractor.extract(fileName, bytes),
+                e -> TraceAttrs.of("type", e.type(), "charCount", e.text().length()));
         String text = extracted.text().trim();
         if (text.isEmpty()) {
             throw new IllegalArgumentException("未能从文件中解析出有效文本,无法入库");
@@ -86,14 +110,24 @@ public class KnowledgeUploadService {
                 .put("file_name", fileName);
         Document document = Document.from(text, meta);
 
-        List<TextSegment> segments = DocumentSplitters.recursive(chunkSize, chunkOverlap).split(document);
+        List<TextSegment> segments = tracer.inChild("document.split", RunTypes.CHAIN,
+                TraceAttrs.of("charCount", text.length(), "chunkSize", chunkSize, "chunkOverlap", chunkOverlap),
+                () -> DocumentSplitters.recursive(chunkSize, chunkOverlap).split(document),
+                s -> TraceAttrs.of("segmentCount", s.size()));
         if (segments.isEmpty()) {
             throw new IllegalArgumentException("切块结果为空,无法入库");
         }
 
-        // qwen 嵌入单次 batch 上限 10，分批后再合并
-        List<Embedding> embeddings = EmbeddingBatchHelper.embedAll(embeddingModel, segments);
-        int written = ingestionService.ingestSegments(segments, embeddings, userId);
+        // qwen 嵌入单次 batch 上限 10，分批后再合并。
+        // 用一个 embedding 类型的聚合 span 包住：listener 看到当前 span 是 embedding 就只累加 token，不再逐批建子 span
+        List<Embedding> embeddings = tracer.inChild("embedding.batch", RunTypes.EMBEDDING,
+                TraceAttrs.of("segmentCount", segments.size(), "totalChars", text.length()),
+                () -> EmbeddingBatchHelper.embedAll(embeddingModel, segments),
+                list -> TraceAttrs.of("count", list.size(), "dimension", list.isEmpty() ? 0 : list.get(0).dimension()));
+        int written = tracer.inChild("es.index", RunTypes.TOOL,
+                TraceAttrs.of("segmentCount", segments.size()),
+                () -> ingestionService.ingestSegments(segments, embeddings, userId),
+                n -> TraceAttrs.of("written", n));
         upsertDocument(existing, userId, fileName, text.length(), written);
         return new UploadResult(fileName, extracted.type(), text.length(), written, Instant.now().toEpochMilli());
     }

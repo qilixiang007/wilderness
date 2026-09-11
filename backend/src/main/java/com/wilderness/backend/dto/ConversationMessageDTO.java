@@ -10,5 +10,6 @@ public record ConversationMessageDTO(
 		String answer,
 		List<AiSource> sources,
 		boolean webEnabled,
-		Instant createdAt) {
+		Instant createdAt,
+		String traceId) {
 }

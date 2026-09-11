@@ -70,6 +70,6 @@ public class ConversationHistoryService {
             sources = List.of();
         }
         return new ConversationMessageDTO(message.getId(), message.getQuestion(), message.getAnswer(),
-                sources, message.isWebEnabled(), message.getCreatedAt());
+                sources, message.isWebEnabled(), message.getCreatedAt(), message.getTraceId());
     }
 }

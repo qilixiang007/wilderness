@@ -89,8 +89,13 @@ public class CelestialGenerationHistory {
 	@Column(name = "raw_model_response", columnDefinition = "LONGTEXT")
 	private String rawModelResponse;
 
+	/** 仅在 LangSmith 上报启用时有值，与 traceId 相同。 */
 	@Column(name = "langsmith_run_id")
 	private String langsmithRunId;
+
+	/** 本次生成的调用链路 id（追踪关闭时为 null）。 */
+	@Column(name = "trace_id", length = 36)
+	private String traceId;
 
 	@Column(nullable = false)
 	private boolean success;
@@ -113,7 +118,7 @@ public class CelestialGenerationHistory {
 			String name, String type, String parametersJson, String introduction, String renderJson,
 			String imageUrl, boolean imageTemporary, Long imageId, String sourcesJson, String stepsJson,
 			String referenceText, String systemPrompt, String userPrompt, String rawModelResponse,
-			String langsmithRunId, boolean success, String errorMessage) {
+			String langsmithRunId, String traceId, boolean success, String errorMessage) {
 		this.userId = userId;
 		this.agentId = agentId;
 		this.agentName = agentName;
@@ -133,6 +138,7 @@ public class CelestialGenerationHistory {
 		this.userPrompt = userPrompt;
 		this.rawModelResponse = rawModelResponse;
 		this.langsmithRunId = langsmithRunId;
+		this.traceId = traceId;
 		this.success = success;
 		this.errorMessage = errorMessage;
 		this.createdAt = Instant.now();
@@ -216,6 +222,10 @@ public class CelestialGenerationHistory {
 
 	public String getLangsmithRunId() {
 		return langsmithRunId;
+	}
+
+	public String getTraceId() {
+		return traceId;
 	}
 
 	public boolean isSuccess() {
