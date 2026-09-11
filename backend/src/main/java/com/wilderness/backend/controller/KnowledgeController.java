@@ -4,9 +4,9 @@ import com.wilderness.backend.ai.KnowledgeIngestionService;
 import com.wilderness.backend.ai.KnowledgeUploadService;
 import com.wilderness.backend.auth.AuthContext;
 import com.wilderness.backend.common.ApiResponse;
+import com.wilderness.backend.dto.BatchUploadResult;
 import com.wilderness.backend.dto.KnowledgeFileDTO;
 import com.wilderness.backend.dto.KnowledgeFilePreviewDTO;
-import com.wilderness.backend.dto.UploadResult;
 import com.wilderness.backend.service.KnowledgeFileService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.MediaType;
@@ -37,10 +37,13 @@ public class KnowledgeController {
         this.ingestionService = ingestionService;
     }
 
-    /** 用户上传文件入库(Word/PDF/Excel/txt),自动切块向量化后写入知识库。仅登录用户可上传。 */
+    /**
+     * 用户批量上传文件入库(Word/PDF/Excel/txt),自动切块向量化后写入知识库。仅登录用户可上传。
+     * 一次请求提交一批(上限见 KnowledgeUploadService.MAX_BATCH_SIZE),单个文件失败不影响同批其它文件。
+     */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<UploadResult> upload(@RequestParam("file") MultipartFile file) throws Exception {
-        return ApiResponse.ok(uploadService.upload(file, AuthContext.currentUserId()));
+    public ApiResponse<BatchUploadResult> upload(@RequestParam("files") List<MultipartFile> files) {
+        return ApiResponse.ok(uploadService.uploadBatch(files, AuthContext.currentUserId()));
     }
 
     /** 当前用户上传过的文件清单(仅登录)。 */

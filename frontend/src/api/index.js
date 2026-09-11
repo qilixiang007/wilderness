@@ -146,10 +146,12 @@ export const api = {
 			body: JSON.stringify({ description }),
 			timeout: 60000
 		}),
-	uploadKnowledge: (file) => {
+	// 一次提交一批文件(后端上限 5 个)。耗时大头在上传完之后的解析+向量化，
+	// 满批可能跑几分钟，超时给到 5 分钟。
+	uploadKnowledge: (files) => {
 		const form = new FormData()
-		form.append('file', file)
-		return request('/api/knowledge/upload', { method: 'POST', body: form, timeout: 60000 })
+		files.forEach((file) => form.append('files', file))
+		return request('/api/knowledge/upload', { method: 'POST', body: form, timeout: 300000 })
 	},
 	// —— 认证 ——
 	verifyCode: (email, purpose) =>
