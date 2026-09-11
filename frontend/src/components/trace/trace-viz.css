@@ -1,0 +1,115 @@
+/*
+ * AI 调用链路页面的数据可视化配色（按 dataviz 方法论：先定用途再定颜色，并用验证脚本跑过）。
+ * - run_type 是分类身份色，槽位顺序固定（chain→llm→retriever→tool→embedding→parser），颜色跟着类型走；
+ *   浅色：CVD 最差相邻 ΔE 9.1 / 正常视觉 19.6，3 个色对浅色底 <3:1，靠每行可见的文字标签补偿；
+ *   深色（深邃风底 #111933）：CVD 最差相邻 ΔE 8.4 / 正常视觉 19.3，全部 ≥3:1。
+ * - 失败用状态色 critical，且永远配 ✕ 图标 + 文字，不单靠颜色表达。
+ * - 浅色是默认值；深邃风主题下切到深色档（同一组色相按深底重新取阶，不是简单反色）。
+ */
+.trace-viz {
+	--rt-chain: #2a78d6;
+	--rt-llm: #eb6834;
+	--rt-retriever: #1baf7a;
+	--rt-tool: #eda100;
+	--rt-embedding: #e87ba4;
+	--rt-parser: #008300;
+	--viz-series-1: #2a78d6;
+	--viz-series-2: #eb6834;
+	--viz-critical: #d03b3b;
+	--viz-critical-text: #b3261e;
+	--viz-good: #0ca30c;
+	--viz-grid: #e1e0d9;
+	--viz-axis: #c3c2b7;
+	--viz-surface: #fdfbf5;
+	--viz-track: rgba(32, 38, 63, 0.05);
+}
+
+.page-shell[data-theme='deep-space'] .trace-viz {
+	--rt-chain: #3987e5;
+	--rt-llm: #d95926;
+	--rt-retriever: #199e70;
+	--rt-tool: #c98500;
+	--rt-embedding: #d55181;
+	--rt-parser: #008300;
+	--viz-series-1: #3987e5;
+	--viz-series-2: #d95926;
+	--viz-critical: #d03b3b;
+	--viz-critical-text: #ff8a80;
+	--viz-good: #0ca30c;
+	--viz-grid: rgba(196, 216, 255, 0.1);
+	--viz-axis: rgba(196, 216, 255, 0.22);
+	--viz-surface: #111933;
+	--viz-track: rgba(196, 216, 255, 0.04);
+}
+
+/* 状态徽标：图标 + 文字，颜色只是辅助 */
+.trace-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	font-size: 0.78rem;
+	white-space: nowrap;
+	color: var(--muted);
+}
+
+.trace-status::before {
+	content: '';
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	background: var(--viz-good);
+}
+
+.trace-status.is-error {
+	color: var(--viz-critical-text);
+}
+
+.trace-status.is-error::before {
+	content: '✕';
+	width: auto;
+	height: auto;
+	background: none;
+	font-size: 0.72rem;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.trace-status.is-cancelled::before,
+.trace-status.is-running::before {
+	background: var(--muted);
+}
+
+.rt-swatch {
+	display: inline-block;
+	flex-shrink: 0;
+	width: 0.6rem;
+	height: 0.6rem;
+	border-radius: 2px;
+	background: var(--rt-chain);
+}
+
+.rt-swatch.rt-llm { background: var(--rt-llm); }
+.rt-swatch.rt-retriever { background: var(--rt-retriever); }
+.rt-swatch.rt-tool { background: var(--rt-tool); }
+.rt-swatch.rt-embedding { background: var(--rt-embedding); }
+.rt-swatch.rt-parser { background: var(--rt-parser); }
+
+/* 等宽数字只用于需要纵向对齐的列 */
+.trace-num {
+	font-variant-numeric: tabular-nums;
+}
+
+.trace-pre {
+	margin: 0;
+	max-height: 360px;
+	overflow: auto;
+	padding: 0.7rem 0.85rem;
+	border-radius: 10px;
+	border: 1px solid var(--card-border);
+	background: var(--panel-glow);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 0.78rem;
+	line-height: 1.55;
+	white-space: pre-wrap;
+	word-break: break-word;
+}

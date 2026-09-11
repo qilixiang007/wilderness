@@ -12,6 +12,7 @@ export default {
 		ask: 'AI 问答',
 		agent: '天体生成',
 		history: '历史',
+		traces: '调用链路',
 		menu: '打开菜单'
 	},
 	common: {
@@ -281,8 +282,134 @@ export default {
 		deleteCompareConfirm: '确定删除这条对比记录吗？删除后不可恢复。',
 		deleteGenerationConfirm: '确定删除这个生成天体记录吗？删除后不可恢复。',
 		webSearch: '联网',
+		viewTrace: '查看调用链路',
 		groupToday: '今天',
 		groupYesterday: '昨天'
+	},
+	traces: {
+		kicker: '可观测性',
+		title: 'AI 调用链路',
+		detailTitle: '调用链路详情',
+		intro: '每次 AI 请求都会记录成一棵调用树：检索、联网搜索、模型调用、解析……每个环节的耗时、token 与输入输出都能在这里追溯。',
+		introAdmin: '管理员视图：可查看全部用户的调用链路，以及统计概览。',
+		tabs: {
+			list: '调用列表',
+			stats: '统计概览'
+		},
+		filters: {
+			name: '操作类型',
+			status: '状态',
+			range: '时间范围',
+			allNames: '全部操作',
+			allStatus: '全部状态',
+			keywordPlaceholder: '搜索输入、输出或错误里的文字…',
+			search: '搜索',
+			reset: '重置'
+		},
+		ranges: {
+			h1: '最近 1 小时',
+			h24: '最近 24 小时',
+			d7: '最近 7 天'
+		},
+		ops: {
+			rag_chat: 'AI 问答',
+			rag_stream_chat: 'AI 问答（流式）',
+			rag_explain: '天体讲解',
+			agent_generate_celestial: '天体生成',
+			agent_generate_celestial_custom: '天体生成（自定义智能体）',
+			compare: '多天体对比',
+			knowledge_upload: '知识库上传'
+		},
+		status: {
+			success: '成功',
+			error: '失败',
+			cancelled: '已取消',
+			running: '进行中'
+		},
+		columns: {
+			operation: '操作',
+			status: '状态',
+			time: '开始时间',
+			duration: '耗时',
+			tokens: 'Token',
+			spans: '节点',
+			user: '用户'
+		},
+		anonymous: '匿名',
+		empty: '还没有调用记录。去问答、对比或生成一次试试。',
+		offline: '后端不可用，无法加载调用链路。',
+		loadFailed: '加载失败，请重试。',
+		loadMore: '加载更多',
+		keywordTruncated: '命中结果较多，只在最近命中的 1000 条调用链路里分页。',
+		back: '返回调用列表',
+		notFound: '调用链路不存在，或你无权查看。',
+		traceId: 'Trace ID',
+		copy: '复制',
+		copied: '已复制',
+		startedAt: '开始时间',
+		duration: '总耗时',
+		tokens: 'Token 用量',
+		tokenBreakdown: '输入 {prompt} · 输出 {completion}',
+		ttft: '首字延迟',
+		spanCount: '节点数',
+		user: '用户',
+		waterfall: '调用瀑布图',
+		waterfallHint: '点击任意一行，查看该节点的输入与输出。',
+		runTypes: '节点类型',
+		span: {
+			inputs: '输入',
+			outputs: '输出',
+			error: '错误',
+			model: '模型',
+			duration: '耗时',
+			tokens: 'Token',
+			offset: '开始于',
+			none: '无'
+		},
+		roles: {
+			system: '系统',
+			user: '用户',
+			ai: '模型'
+		},
+		stats: {
+			kpi: {
+				traces: '调用量',
+				errorRate: '错误率',
+				p50: '耗时 P50',
+				p95: '耗时 P95',
+				ttftP50: '首字延迟 P50',
+				ttftP95: '首字延迟 P95',
+				tokens: 'Token 总量'
+			},
+			charts: {
+				volume: '调用量',
+				latency: '耗时分位数',
+				tokens: 'Token 用量'
+			},
+			series: {
+				success: '成功',
+				error: '失败',
+				p50: 'P50',
+				p95: 'P95',
+				tokens: 'Token'
+			},
+			byName: '按操作拆分',
+			byModel: '按模型拆分',
+			columns: {
+				time: '时间',
+				calls: '调用次数',
+				errors: '失败',
+				errorRate: '错误率',
+				model: '模型',
+				prompt: '输入 Token',
+				completion: '输出 Token',
+				total: '总 Token'
+			},
+			tableView: '表格视图',
+			chartView: '图表视图',
+			empty: '所选时间范围内没有调用记录。',
+			unavailable: '统计服务暂不可用（ES 异常），调用列表不受影响。'
+		}
 	},
 	auth: {
 		kicker: '欢迎回到旷野',

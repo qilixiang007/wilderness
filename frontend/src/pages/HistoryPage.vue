@@ -424,6 +424,9 @@ onMounted(() => load(true))
 							</div>
 
 							<div class="history-actions">
+								<RouterLink v-if="item.traceId" class="trace-link" :to="`/traces/${item.traceId}`">
+									{{ $t('history.viewTrace') }}
+								</RouterLink>
 								<button class="history-delete" type="button" :disabled="deletingId === item.id" @click="remove(item)">
 									{{ $t('history.delete') }}
 								</button>
@@ -588,13 +591,22 @@ onMounted(() => load(true))
 									</RouterLink>
 								</div>
 
-								<button class="log-toggle" type="button" @click="toggleGenerationLog(record.id)">
-									{{
-										generationLogExpandedId === record.id
-											? $t('history.generationHideLog')
-											: $t('history.generationViewLog')
-									}}
-								</button>
+								<div class="generation-log-actions">
+									<button class="log-toggle" type="button" @click="toggleGenerationLog(record.id)">
+										{{
+											generationLogExpandedId === record.id
+												? $t('history.generationHideLog')
+												: $t('history.generationViewLog')
+										}}
+									</button>
+									<RouterLink
+										v-if="generationDetail[record.id].traceId"
+										class="log-toggle"
+										:to="`/traces/${generationDetail[record.id].traceId}`"
+									>
+										{{ $t('history.viewTrace') }}
+									</RouterLink>
+								</div>
 
 								<div v-if="generationLogExpandedId === record.id" class="log-block">
 									<div class="log-field">
@@ -780,7 +792,30 @@ onMounted(() => load(true))
 }
 
 .history-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
 	margin-top: 0.8rem;
+}
+
+.trace-link {
+	padding: 0.25rem 0.7rem;
+	border: 1px solid var(--button-border);
+	border-radius: 999px;
+	background: var(--button-bg);
+	color: var(--accent);
+	font-size: 0.78rem;
+	transition: background 0.2s ease;
+}
+
+.trace-link:hover {
+	background: var(--panel-glow);
+}
+
+.generation-log-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
 }
 
 .history-delete {
