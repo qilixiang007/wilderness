@@ -3,8 +3,11 @@ package com.wilderness.backend.ai;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import com.wilderness.backend.ai.history.ConversationRecorder;
-import com.wilderness.backend.ai.langsmith.LangSmithTracer;
-import com.wilderness.backend.ai.langsmith.RunRef;
+import com.wilderness.backend.ai.trace.RunTypes;
+import com.wilderness.backend.ai.trace.Span;
+import com.wilderness.backend.ai.trace.TraceAttrs;
+import com.wilderness.backend.ai.trace.TraceScope;
+import com.wilderness.backend.ai.trace.Tracer;
 import com.wilderness.backend.domain.CelestialObject;
 import com.wilderness.backend.dto.AiSource;
 import com.wilderness.backend.dto.ChatResponse;
@@ -24,7 +27,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -47,7 +49,7 @@ public class RagService {
     private final AiAssistant assistant;
     private final ElasticsearchClient es;
     private final WebSearchService webSearchService;
-    private final LangSmithTracer tracer;
+    private final Tracer tracer;
     private final String indexName;
     private final ObjectProvider<ConversationRecorder> recorderProvider;
     private final CelestialObjectRepository celestialObjectRepository;
@@ -57,7 +59,7 @@ public class RagService {
                       ElasticsearchClient es,
                       ElasticsearchIndexManager indexManager,
                       WebSearchService webSearchService,
-                      LangSmithTracer tracer,
+                      Tracer tracer,
                       ObjectProvider<ConversationRecorder> recorderProvider,
                       CelestialObjectRepository celestialObjectRepository) {
         this.retriever = retriever;
@@ -71,8 +73,9 @@ public class RagService {
     }
 
     public ChatResponse chat(String question, boolean webSearchEnabled, Long userId) throws Exception {
-        RunRef run = tracer.start("rag.chat", "chain", Map.of("question", question, "webSearchEnabled", webSearchEnabled));
-        try {
+        Span root = tracer.start("rag.chat", RunTypes.CHAIN,
+                TraceAttrs.of("question", question, "webSearchEnabled", webSearchEnabled), userId);
+        try (TraceScope ignored = root.makeCurrent()) {
             List<Content> contents;
             boolean retrievalDegraded;
             try {
@@ -85,15 +88,12 @@ public class RagService {
             }
             List<AiSource> sources = toSources(contents);
             String answer = assistant.chat(today(), question, formatSources(contents));
-            recordConversation(userId, question, webSearchEnabled, answer, sources);
+            recordConversation(userId, question, webSearchEnabled, answer, sources, root.traceId());
             ChatResponse response = new ChatResponse(answer, sources, retrievalDegraded);
-            Map<String, Object> outputs = new LinkedHashMap<>();
-            outputs.put("answer", answer);
-            outputs.put("sourceCount", sources.size());
-            tracer.finish(run, outputs);
+            root.end(TraceAttrs.of("answer", answer, "sourceCount", sources.size(), "retrievalDegraded", retrievalDegraded));
             return response;
         } catch (Exception e) {
-            tracer.fail(run, e);
+            root.fail(e);
             throw e;
         }
     }
@@ -111,37 +111,45 @@ public class RagService {
                            Consumer<Boolean> onRetrievalStatus,
                            Consumer<Throwable> onError,
                            Runnable onDone) {
-        RunRef run = tracer.start("rag.stream_chat", "chain", Map.of("question", question, "webSearchEnabled", webSearchEnabled));
-        try {
+        Span root = tracer.start("rag.stream_chat", RunTypes.CHAIN,
+                TraceAttrs.of("question", question, "webSearchEnabled", webSearchEnabled), userId);
+        // 流式回调跑在模型的 HTTP 线程上，ThreadLocal 不可用：回调里直接用闭包持有的 root
+        try (TraceScope ignored = root.makeCurrent()) {
             List<Content> contents;
+            boolean retrievalDegraded;
             try {
                 contents = retrieveWithWeb(question, webSearchEnabled, userId);
+                retrievalDegraded = false;
                 onRetrievalStatus.accept(false);
             } catch (Exception e) {
                 log.warn("检索失败，降级为无知识库上下文回答 question={}", question, e);
                 contents = List.of();
+                retrievalDegraded = true;
                 onRetrievalStatus.accept(true);
             }
             List<AiSource> sources = toSources(contents);
             onSources.accept(sources);
+            boolean degraded = retrievalDegraded;
+            // start() 在当前线程同步触发模型 listener 的 onRequest，llm span 因此挂在 root 下
             assistant.chatStream(today(), question, formatSources(contents))
-                    .onPartialResponse(onDelta::accept)
+                    .onPartialResponse(delta -> {
+                        root.markFirstToken();
+                        onDelta.accept(delta);
+                    })
                     .onCompleteResponse(r -> {
                         // 流式结束:落库完整回答后,维持原有 onDone 顺序
-                        Map<String, Object> outputs = new LinkedHashMap<>();
-                        outputs.put("answer", r.aiMessage().text());
-                        outputs.put("sourceCount", sources.size());
-                        tracer.finish(run, outputs);
-                        recordConversation(userId, question, webSearchEnabled, r.aiMessage().text(), sources);
+                        String answer = r.aiMessage().text();
+                        root.end(TraceAttrs.of("answer", answer, "sourceCount", sources.size(), "retrievalDegraded", degraded));
+                        recordConversation(userId, question, webSearchEnabled, answer, sources, root.traceId());
                         onDone.run();
                     })
                     .onError(e -> {
-                        tracer.fail(run, e);
+                        root.fail(e);
                         onError.accept(e);
                     })
                     .start();
         } catch (Exception e) {
-            tracer.fail(run, e);
+            root.fail(e);
             onError.accept(e);
         }
     }
@@ -151,9 +159,18 @@ public class RagService {
      * 联网条目以 type=web 标记,slug 存网页 URL,前端据此渲染为外部链接。
      */
     private List<Content> retrieveWithWeb(String question, boolean webSearchEnabled, Long userId) throws Exception {
-        List<Content> contents = new ArrayList<>(retriever.retrieve(Query.from(question), userId));
+        List<Content> contents = new ArrayList<>(tracer.inChild("retrieve.hybrid", RunTypes.RETRIEVER,
+                TraceAttrs.of("query", question),
+                () -> retriever.retrieve(Query.from(question), userId),
+                RagService::documentsOutput));
         if (webSearchEnabled) {
-            for (WebResult r : webSearchService.search(question)) {
+            List<WebResult> webResults = tracer.inChild("web.search", RunTypes.TOOL,
+                    TraceAttrs.of("query", question),
+                    () -> webSearchService.search(question),
+                    results -> TraceAttrs.of("results", results.stream()
+                            .map(r -> TraceAttrs.of("title", r.title(), "url", r.url(), "snippet", r.snippet()))
+                            .toList()));
+            for (WebResult r : webResults) {
                 Metadata meta = new Metadata()
                         .put("zh_name", r.title())
                         .put("en_name", r.title())
@@ -187,12 +204,20 @@ public class RagService {
     }
 
     public ExplainResponse explain(String slug, Long userId) throws Exception {
-        RunRef run = tracer.start("rag.explain", "chain", Map.of("slug", slug));
-        try {
+        // 单独调用时是根；被多天体对比调用时，线程上已有对比的 span，自动成为其子树
+        Span root = tracer.start("rag.explain", RunTypes.CHAIN, TraceAttrs.of("slug", slug), userId);
+        try (TraceScope ignored = root.makeCurrent()) {
             List<Map> docs;
             boolean retrievalDegraded;
             try {
-                docs = searchExplainDocs(slug, userId);
+                docs = tracer.inChild("retrieve.explain_docs", RunTypes.RETRIEVER,
+                        TraceAttrs.of("slug", slug),
+                        () -> searchExplainDocs(slug, userId),
+                        found -> TraceAttrs.of("documents", found.stream()
+                                .map(d -> TraceAttrs.of("page_content", d.get("content"), "metadata", TraceAttrs.of(
+                                        "slug", d.get("slug"), "type", d.get("type"), "zh_name", d.get("zh_name"),
+                                        "chunk_index", d.get("chunk_index"))))
+                                .toList()));
                 retrievalDegraded = false;
             } catch (Exception e) {
                 log.warn("检索失败，尝试用天体目录数据降级 slug={}", slug, e);
@@ -233,13 +258,10 @@ public class RagService {
 
             String answer = assistant.explain(zhName, enName, sourcesText);
             ExplainResponse response = new ExplainResponse(answer, sources, retrievalDegraded);
-            Map<String, Object> outputs = new LinkedHashMap<>();
-            outputs.put("answer", answer);
-            outputs.put("sourceCount", sources.size());
-            tracer.finish(run, outputs);
+            root.end(TraceAttrs.of("answer", answer, "sourceCount", sources.size(), "retrievalDegraded", retrievalDegraded));
             return response;
         } catch (Exception e) {
-            tracer.fail(run, e);
+            root.fail(e);
             throw e;
         }
     }
@@ -273,6 +295,16 @@ public class RagService {
                     .append("\n\n");
         }
         return sb.toString();
+    }
+
+    /** 检索结果转成 LangSmith retriever run 惯用的 documents 结构：[{page_content, metadata}]。 */
+    private static Map<String, Object> documentsOutput(List<Content> contents) {
+        return TraceAttrs.of("documents", contents.stream()
+                .map(c -> {
+                    TextSegment seg = c.textSegment();
+                    return TraceAttrs.of("page_content", seg.text(), "metadata", seg.metadata().toMap());
+                })
+                .toList());
     }
 
     private List<AiSource> toSources(List<Content> contents) {
@@ -314,11 +346,12 @@ public class RagService {
      * 对话历史落库(尽力而为)。持久化任何失败都不应影响聊天主流程,
      * 故 recorder 空判 + try/catch 双保险。
      */
-    private void recordConversation(Long userId, String question, boolean webEnabled, String answer, List<AiSource> sources) {
+    private void recordConversation(Long userId, String question, boolean webEnabled, String answer,
+                                    List<AiSource> sources, String traceId) {
         ConversationRecorder recorder = recorderProvider.getIfAvailable();
         if (recorder != null) {
             try {
-                recorder.record(userId, question, webEnabled, answer, sources);
+                recorder.record(userId, question, webEnabled, answer, sources, traceId);
             } catch (Exception ignored) {
                 // recorder 内部已自吞异常,此处兜底确保不打断回答
             }

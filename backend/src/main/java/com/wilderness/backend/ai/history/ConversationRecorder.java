@@ -41,7 +41,8 @@ public class ConversationRecorder {
         this.esWriter = esWriter;
     }
 
-    public void record(Long userId, String question, boolean webEnabled, String answer, List<AiSource> sources) {
+    public void record(Long userId, String question, boolean webEnabled, String answer, List<AiSource> sources,
+                       String traceId) {
         if (userId == null) {
             return; // 未登录不落库
         }
@@ -49,7 +50,7 @@ public class ConversationRecorder {
             List<AiSource> safeSources = sources == null ? List.of() : sources;
             ConversationMessage saved = repository.save(new ConversationMessage(
                     userId, question, answer,
-                    objectMapper.writeValueAsString(safeSources), webEnabled));
+                    objectMapper.writeValueAsString(safeSources), webEnabled, traceId));
 
             ConversationMessageEvent event = new ConversationMessageEvent(
                     saved.getId(), userId, question, answer, safeSources, webEnabled, saved.getCreatedAt());

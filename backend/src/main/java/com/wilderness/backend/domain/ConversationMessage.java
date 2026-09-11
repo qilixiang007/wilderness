@@ -44,16 +44,22 @@ public class ConversationMessage {
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
+	/** 本次问答的调用链路 id（追踪关闭时为 null），历史页据此跳转 trace 详情。 */
+	@Column(name = "trace_id", length = 36)
+	private String traceId;
+
 	protected ConversationMessage() {
 		// JPA
 	}
 
-	public ConversationMessage(Long userId, String question, String answer, String sourcesJson, boolean webEnabled) {
+	public ConversationMessage(Long userId, String question, String answer, String sourcesJson, boolean webEnabled,
+			String traceId) {
 		this.userId = userId;
 		this.question = question;
 		this.answer = answer;
 		this.sourcesJson = sourcesJson;
 		this.webEnabled = webEnabled;
+		this.traceId = traceId;
 		this.createdAt = Instant.now();
 	}
 
@@ -83,5 +89,9 @@ public class ConversationMessage {
 
 	public Instant getCreatedAt() {
 		return createdAt;
+	}
+
+	public String getTraceId() {
+		return traceId;
 	}
 }

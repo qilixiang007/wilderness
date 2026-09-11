@@ -1,5 +1,6 @@
 package com.wilderness.backend.config;
 
+import com.wilderness.backend.ai.trace.TracingTaskDecorator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -24,6 +25,8 @@ public class AiExecutorConfig {
         executor.setMaxPoolSize(4);
         executor.setQueueCapacity(64);
         executor.setThreadNamePrefix("ai-cmp-");
+        // 透传当前 span：并行的 explain 挂到对比 trace 下
+        executor.setTaskDecorator(new TracingTaskDecorator());
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(30);
@@ -38,6 +41,7 @@ public class AiExecutorConfig {
         executor.setMaxPoolSize(32);
         executor.setQueueCapacity(0);
         executor.setThreadNamePrefix("ai-sse-");
+        executor.setTaskDecorator(new TracingTaskDecorator());
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(30);
