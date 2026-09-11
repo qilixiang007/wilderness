@@ -12,5 +12,6 @@ public record CelestialGenerationSummaryDTO(
 		RenderSpec render,
 		String agentName,
 		boolean success,
-		Instant createdAt) {
+		Instant createdAt,
+		boolean isPublic) {
 }

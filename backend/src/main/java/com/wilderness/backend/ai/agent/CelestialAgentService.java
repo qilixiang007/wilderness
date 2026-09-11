@@ -166,7 +166,8 @@ public class CelestialAgentService {
                     tool.sources(),
                     steps,
                     null,
-                    imageTemporary);
+                    imageTemporary,
+                    true);
 
             tracer.finish(run, Map.of(
                     "name", result.name(),
@@ -196,7 +197,8 @@ public class CelestialAgentService {
             return result;
         }
         return new GenerationResult(result.name(), result.type(), result.parameters(), result.introduction(),
-                result.render(), result.imageUrl(), result.sources(), result.steps(), historyId, result.imageTemporary());
+                result.render(), result.imageUrl(), result.sources(), result.steps(), historyId,
+                result.imageTemporary(), result.success());
     }
 
     /**
@@ -288,13 +290,13 @@ public class CelestialAgentService {
                 "未命名天体",
                 "恒星",
                 Map.of("说明", "本次生成未能完成，请稍后重试"),
-                "生成过程中遇到异常，未能产出完整内容。请稍后重试。\n\n> 技术细节（面试可展示容错设计）："
-                        + e.getClass().getSimpleName(),
+                "生成过程中遇到异常，未能产出完整内容。请稍后重试。",
                 null,
                 null,
                 List.of(),
                 List.of(new AgentStep("生成", "模型异常已降级返回：" + e.getMessage())),
                 null,
+                false,
                 false);
     }
 

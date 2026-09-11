@@ -7,6 +7,7 @@ const user = ref(null)
 
 export function useAuth() {
 	const isLoggedIn = computed(() => user.value != null)
+	const isAdmin = computed(() => user.value?.isAdmin === true)
 
 	/** 启动/刷新时恢复会话：请求 /me，401 或后端不可达都视为未登录。 */
 	async function refreshMe() {
@@ -45,5 +46,5 @@ export function useAuth() {
 		user.value = null
 	}
 
-	return { user, isLoggedIn, refreshMe, login, register, logout }
+	return { user, isLoggedIn, isAdmin, refreshMe, login, register, logout }
 }

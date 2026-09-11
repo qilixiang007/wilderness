@@ -18,7 +18,10 @@ import java.time.Instant;
  */
 @Entity
 @Table(name = "celestial_generation_history",
-		indexes = @Index(name = "idx_cgh_user_time", columnList = "user_id, created_at"))
+		indexes = {
+				@Index(name = "idx_cgh_user_time", columnList = "user_id, created_at"),
+				@Index(name = "idx_cgh_public_time", columnList = "is_public, success, created_at")
+		})
 public class CelestialGenerationHistory {
 
 	@Id
@@ -97,6 +100,10 @@ public class CelestialGenerationHistory {
 
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
+
+	/** 是否公开到广场；默认私密，仅本人或管理员可切换。 */
+	@Column(name = "is_public", nullable = false)
+	private boolean isPublic;
 
 	protected CelestialGenerationHistory() {
 		// JPA
@@ -221,5 +228,13 @@ public class CelestialGenerationHistory {
 
 	public Instant getCreatedAt() {
 		return createdAt;
+	}
+
+	public boolean isPublic() {
+		return isPublic;
+	}
+
+	public void setPublic(boolean isPublic) {
+		this.isPublic = isPublic;
 	}
 }

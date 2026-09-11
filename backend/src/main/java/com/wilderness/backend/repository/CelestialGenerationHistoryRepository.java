@@ -12,4 +12,8 @@ public interface CelestialGenerationHistoryRepository extends JpaRepository<Cele
 	Page<CelestialGenerationHistory> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
 	Optional<CelestialGenerationHistory> findByIdAndUserId(Long id, Long userId);
+
+	Page<CelestialGenerationHistory> findByIsPublicTrueAndSuccessTrueOrderByCreatedAtDesc(Pageable pageable);
+
+	boolean existsByImageIdAndIsPublicTrueAndSuccessTrue(Long imageId);
 }

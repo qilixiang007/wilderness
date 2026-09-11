@@ -10,6 +10,7 @@ import FavoritesPage from './pages/FavoritesPage.vue'
 import HistoryPage from './pages/HistoryPage.vue'
 import AuthPage from './pages/AuthPage.vue'
 import AccountPage from './pages/AccountPage.vue'
+import GalleryPage from './pages/GalleryPage.vue'
 
 export default [
 	{ path: '/', component: HomePage, meta: { titleKey: 'site.title' } },
@@ -23,5 +24,6 @@ export default [
 	{ path: '/favorites', component: FavoritesPage, meta: { requiresAuth: true, titleKey: 'favorites.title' } },
 	{ path: '/history', component: HistoryPage, meta: { requiresAuth: true, titleKey: 'history.title' } },
 	{ path: '/login', component: AuthPage, meta: { titleKey: 'auth.title' } },
-	{ path: '/account', component: AccountPage, meta: { requiresAuth: true, titleKey: 'account.title' } }
+	{ path: '/account', component: AccountPage, meta: { requiresAuth: true, titleKey: 'account.title' } },
+	{ path: '/gallery', component: GalleryPage, meta: { titleKey: 'gallery.title' } }
 ]

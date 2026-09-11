@@ -7,6 +7,7 @@ import ThemeSelector from './components/ThemeSelector.vue'
 import LanguageSelector from './components/LanguageSelector.vue'
 import BackButton from './components/BackButton.vue'
 import CompareBar from './components/CompareBar.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
 import { useAuth } from './composables/useAuth'
 import { useTheme } from './composables/useTheme'
 import { useCompare } from './composables/useCompare'
@@ -113,6 +114,7 @@ watch(() => route.path, updateTitle, { immediate: true })
 		</div>
 
 		<CompareBar />
+		<ConfirmDialog />
 	</div>
 </template>
 

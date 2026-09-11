@@ -11,8 +11,10 @@ import { repairRender } from '../utils/renderRepair'
 import { api, ApiUnavailableError } from '../api'
 import { useAuth } from '../composables/useAuth'
 import { useFavorites } from '../composables/useFavorites'
+import { useConfirm } from '../composables/useConfirm'
 
 const { t, tm } = useI18n()
+const { confirm } = useConfirm()
 
 // 类型 chips 文案走 i18n（双语）
 const typeChips = tm('agent.typeChips')
@@ -140,7 +142,7 @@ async function saveAgent() {
 }
 
 async function confirmDelete(a) {
-	if (!window.confirm(t('agents.deleteConfirm'))) return
+	if (!(await confirm(t('agents.deleteConfirm')))) return
 	try {
 		await api.deleteAgent(a.id)
 		myAgents.value = myAgents.value.filter((x) => x.id !== a.id)
@@ -449,6 +451,9 @@ async function onToggleFavorite() {
 						<img v-if="result.imageUrl" :src="result.imageUrl" :alt="result.name" class="ai-image" />
 						<CelestialVisual v-else :render="visualRender || result.render || {}" :name="result.name" />
 					</div>
+					<p v-if="!result.success" class="visual-caption image-temporary-hint">
+						{{ $t('agent.generationFailedImageHint') }}
+					</p>
 					<p class="visual-caption">
 						{{ $t('agent.imageHint') }}
 					</p>

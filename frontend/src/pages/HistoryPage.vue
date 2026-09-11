@@ -10,8 +10,10 @@ import CelestialVisual from '../components/CelestialVisual.vue'
 import { pick } from '../i18n'
 import { api, ApiUnavailableError } from '../api'
 import { useFavorites } from '../composables/useFavorites'
+import { useConfirm } from '../composables/useConfirm'
 
 const { t } = useI18n()
+const { confirm } = useConfirm()
 
 const PAGE_SIZE = 20
 
@@ -90,6 +92,7 @@ function toggle(item) {
 
 async function remove(item) {
 	if (deletingId.value) return
+	if (!(await confirm(t('history.deleteConfirm')))) return
 	deletingId.value = item.id
 	try {
 		await api.deleteHistory(item.id)
@@ -177,6 +180,7 @@ function toggleCompare(record) {
 
 async function removeCompare(record) {
 	if (compareDeletingId.value) return
+	if (!(await confirm(t('history.deleteCompareConfirm')))) return
 	compareDeletingId.value = record.id
 	try {
 		await api.deleteCompareHistory(record.id)
@@ -220,6 +224,7 @@ const generationLogExpandedId = ref(null) // 详情里"完整链路日志"子折
 // 收藏（自建天体）：函数名和本页 toggleGeneration（展开卡片）撞名，导入时重命名
 const { isFavoriteGeneration, toggleGeneration: toggleGenerationFavorite } = useFavorites()
 const favoritingId = ref(null)
+const visibilityTogglingId = ref(null)
 
 const generationHasMore = computed(() => generationRecords.value.length < generationTotalElements.value)
 
@@ -271,6 +276,18 @@ function toggleGenerationLog(id) {
 	generationLogExpandedId.value = generationLogExpandedId.value === id ? null : id
 }
 
+async function onToggleVisibility(record) {
+	if (visibilityTogglingId.value) return
+	visibilityTogglingId.value = record.id
+	try {
+		record.isPublic = await api.setGenerationVisibility(record.id, !record.isPublic)
+	} catch {
+		generationError.value = t('history.generationVisibilityFailed')
+	} finally {
+		visibilityTogglingId.value = null
+	}
+}
+
 async function onToggleFavorite(historyId) {
 	if (favoritingId.value) return
 	favoritingId.value = historyId
@@ -283,6 +300,7 @@ async function onToggleFavorite(historyId) {
 
 async function removeGeneration(record) {
 	if (generationDeletingId.value) return
+	if (!(await confirm(t('history.deleteGenerationConfirm')))) return
 	generationDeletingId.value = record.id
 	try {
 		await api.deleteGenerationHistory(record.id)
@@ -503,6 +521,16 @@ onMounted(() => load(true))
 									<button class="favorite-toggle" type="button" :disabled="favoritingId === record.id" @click="onToggleFavorite(record.id)">
 										{{ isFavoriteGeneration(record.id) ? $t('agent.unfavorite') : $t('agent.favorite') }}
 									</button>
+									<button
+										v-if="generationDetail[record.id].success"
+										class="visibility-toggle"
+										:class="{ 'is-public': record.isPublic }"
+										type="button"
+										:disabled="visibilityTogglingId === record.id"
+										@click="onToggleVisibility(record)"
+									>
+										{{ record.isPublic ? $t('history.generationMakePrivate') : $t('history.generationMakePublic') }}
+									</button>
 								</div>
 
 								<p v-if="!generationDetail[record.id].success" class="generation-fail-notice">
@@ -522,6 +550,9 @@ onMounted(() => load(true))
 										:name="generationDetail[record.id].name"
 									/>
 								</div>
+								<p v-if="!generationDetail[record.id].success" class="generation-image-temporary-hint">
+									{{ $t('agent.generationFailedImageHint') }}
+								</p>
 								<p v-if="generationDetail[record.id].imageUrl && generationDetail[record.id].imageTemporary" class="generation-image-temporary-hint">
 									{{ $t('agent.imageTemporaryHint') }}
 								</p>
@@ -863,6 +894,32 @@ onMounted(() => load(true))
 }
 
 .favorite-toggle:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.visibility-toggle {
+	padding: 0.2rem 0.7rem;
+	border: 1px solid var(--button-border);
+	border-radius: 999px;
+	background: var(--button-bg);
+	color: var(--muted);
+	font: inherit;
+	font-size: 0.72rem;
+	cursor: pointer;
+	transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.visibility-toggle:hover {
+	background: var(--panel-glow);
+}
+
+.visibility-toggle.is-public {
+	color: var(--accent);
+	border-color: var(--accent);
+}
+
+.visibility-toggle:disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
 }
