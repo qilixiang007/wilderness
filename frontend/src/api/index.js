@@ -224,6 +224,24 @@ export const api = {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ isPublic })
 		}),
+	// —— AI 调用链路（管理员看全部，普通用户看自己的；时间参数为 epoch 毫秒）——
+	listTraces: ({ page = 0, size = 20, name, status, from, to, keyword } = {}) => {
+		const params = new URLSearchParams({ page, size })
+		if (name) params.set('name', name)
+		if (status) params.set('status', status)
+		if (from != null) params.set('from', from)
+		if (to != null) params.set('to', to)
+		if (keyword) params.set('keyword', keyword)
+		return request(`/api/traces?${params.toString()}`)
+	},
+	getTrace: (traceId) => request(`/api/traces/${encodeURIComponent(traceId)}`),
+	// 仅管理员；ES 聚合可能稍慢，放宽超时
+	getTraceStats: ({ from, to } = {}) => {
+		const params = new URLSearchParams()
+		if (from != null) params.set('from', from)
+		if (to != null) params.set('to', to)
+		return request(`/api/traces/stats?${params.toString()}`, { timeout: 15000 })
+	},
 	// —— 公开广场（匿名可访问）——
 	getGallery: (page = 0, size = 20) => request(`/api/gallery?page=${page}&size=${size}`),
 	// —— 自定义智能体（按用户隔离）——

@@ -28,5 +28,6 @@ public record CelestialGenerationDetailDTO(
 		String userPrompt,
 		String rawModelResponse,
 		String langsmithRunId,
+		String traceId,
 		Instant createdAt) {
 }

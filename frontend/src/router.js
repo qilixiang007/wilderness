@@ -12,6 +12,10 @@ import AuthPage from './pages/AuthPage.vue'
 import AccountPage from './pages/AccountPage.vue'
 import GalleryPage from './pages/GalleryPage.vue'
 
+// 调用链路页面懒加载：统计图依赖的 ECharts 体积较大，不进首屏包
+const TracesPage = () => import('./pages/TracesPage.vue')
+const TraceDetailPage = () => import('./pages/TraceDetailPage.vue')
+
 export default [
 	{ path: '/', component: HomePage, meta: { titleKey: 'site.title' } },
 	{ path: '/detail/:slug', component: DetailPage, props: true, meta: { titleKey: 'category.file' } },
@@ -25,5 +29,12 @@ export default [
 	{ path: '/history', component: HistoryPage, meta: { requiresAuth: true, titleKey: 'history.title' } },
 	{ path: '/login', component: AuthPage, meta: { titleKey: 'auth.title' } },
 	{ path: '/account', component: AccountPage, meta: { requiresAuth: true, titleKey: 'account.title' } },
-	{ path: '/gallery', component: GalleryPage, meta: { titleKey: 'gallery.title' } }
+	{ path: '/gallery', component: GalleryPage, meta: { titleKey: 'gallery.title' } },
+	{ path: '/traces', component: TracesPage, meta: { requiresAuth: true, titleKey: 'traces.title' } },
+	{
+		path: '/traces/:traceId',
+		component: TraceDetailPage,
+		props: true,
+		meta: { requiresAuth: true, titleKey: 'traces.detailTitle' }
+	}
 ]

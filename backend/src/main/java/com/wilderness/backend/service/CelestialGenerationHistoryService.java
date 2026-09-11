@@ -59,7 +59,7 @@ public class CelestialGenerationHistoryService {
 	 */
 	public Long save(Long userId, Long agentId, String agentName, String description, GenerationResult result,
 			boolean imageTemporary, Long imageId, String systemPrompt, String userPrompt, String referenceText,
-			String rawModelResponse, String langsmithRunId, boolean success, String errorMessage) {
+			String rawModelResponse, String langsmithRunId, String traceId, boolean success, String errorMessage) {
 		if (userId == null) {
 			return null;
 		}
@@ -71,7 +71,7 @@ public class CelestialGenerationHistoryService {
 			CelestialGenerationHistory saved = repository.save(new CelestialGenerationHistory(userId, agentId, agentName, description,
 					result.name(), result.type(), parametersJson, result.introduction(), renderJson,
 					result.imageUrl(), imageTemporary, imageId, sourcesJson, stepsJson, referenceText, systemPrompt,
-					userPrompt, rawModelResponse, langsmithRunId, success, errorMessage));
+					userPrompt, rawModelResponse, langsmithRunId, traceId, success, errorMessage));
 			return saved.getId();
 		} catch (Exception e) {
 			log.warn("celestial generation history save failed, userId={}", userId, e);
@@ -144,7 +144,7 @@ public class CelestialGenerationHistoryService {
 				fromJson(history.getStepsJson(), new TypeReference<List<AgentStep>>() { }),
 				history.getAgentName(), history.isSuccess(), history.getErrorMessage(),
 				history.getReferenceText(), history.getSystemPrompt(), history.getUserPrompt(),
-				history.getRawModelResponse(), history.getLangsmithRunId(), history.getCreatedAt());
+				history.getRawModelResponse(), history.getLangsmithRunId(), history.getTraceId(), history.getCreatedAt());
 	}
 
 	private String toJson(Object o) {

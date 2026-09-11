@@ -136,6 +136,14 @@ public class AuthService {
 		return email != null && email.equalsIgnoreCase(ADMIN_EMAIL);
 	}
 
+	/** 按 userId 判定管理员（查一次用户邮箱）；用户不存在视为非管理员。 */
+	@Transactional(readOnly = true)
+	public boolean isAdminUser(Long userId) {
+		return userId != null && userRepository.findById(userId)
+				.map(user -> isAdmin(user.getEmail()))
+				.orElse(false);
+	}
+
 	private LoginResult loginResult(User user) {
 		String token;
 		try {

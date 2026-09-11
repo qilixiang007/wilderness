@@ -12,6 +12,7 @@ export default {
 		ask: 'Ask AI',
 		agent: 'Celestial Forge',
 		history: 'History',
+		traces: 'AI Traces',
 		menu: 'Open menu'
 	},
 	common: {
@@ -284,8 +285,134 @@ export default {
 		deleteCompareConfirm: 'Delete this comparison? This cannot be undone.',
 		deleteGenerationConfirm: 'Delete this generated body? This cannot be undone.',
 		webSearch: 'web',
+		viewTrace: 'View call trace',
 		groupToday: 'Today',
 		groupYesterday: 'Yesterday'
+	},
+	traces: {
+		kicker: 'OBSERVABILITY',
+		title: 'AI Traces',
+		detailTitle: 'Trace details',
+		intro: 'Every AI request is recorded as a call tree - retrieval, web search, model calls, parsing - with latency, tokens and inputs/outputs for each step.',
+		introAdmin: 'Admin view: traces from all users, plus the stats overview.',
+		tabs: {
+			list: 'Traces',
+			stats: 'Overview'
+		},
+		filters: {
+			name: 'Operation',
+			status: 'Status',
+			range: 'Time range',
+			allNames: 'All operations',
+			allStatus: 'All statuses',
+			keywordPlaceholder: 'Search text in inputs, outputs or errors…',
+			search: 'Search',
+			reset: 'Reset'
+		},
+		ranges: {
+			h1: 'Last hour',
+			h24: 'Last 24 hours',
+			d7: 'Last 7 days'
+		},
+		ops: {
+			rag_chat: 'AI Q&A',
+			rag_stream_chat: 'AI Q&A (streaming)',
+			rag_explain: 'Object explainer',
+			agent_generate_celestial: 'Celestial Forge',
+			agent_generate_celestial_custom: 'Celestial Forge (custom agent)',
+			compare: 'Multi-object comparison',
+			knowledge_upload: 'Knowledge upload'
+		},
+		status: {
+			success: 'Success',
+			error: 'Failed',
+			cancelled: 'Cancelled',
+			running: 'Running'
+		},
+		columns: {
+			operation: 'Operation',
+			status: 'Status',
+			time: 'Started',
+			duration: 'Duration',
+			tokens: 'Tokens',
+			spans: 'Spans',
+			user: 'User'
+		},
+		anonymous: 'Anonymous',
+		empty: 'No traces yet. Try asking, comparing or generating something.',
+		offline: 'Backend unavailable - traces could not be loaded.',
+		loadFailed: 'Failed to load, please retry.',
+		loadMore: 'Load more',
+		keywordTruncated: 'Many matches - paging only within the 1000 most recent matching traces.',
+		back: 'Back to traces',
+		notFound: 'This trace does not exist, or you are not allowed to view it.',
+		traceId: 'Trace ID',
+		copy: 'Copy',
+		copied: 'Copied',
+		startedAt: 'Started',
+		duration: 'Total duration',
+		tokens: 'Token usage',
+		tokenBreakdown: 'in {prompt} · out {completion}',
+		ttft: 'Time to first token',
+		spanCount: 'Spans',
+		user: 'User',
+		waterfall: 'Call waterfall',
+		waterfallHint: 'Click any row to inspect that span’s inputs and outputs.',
+		runTypes: 'Span types',
+		span: {
+			inputs: 'Inputs',
+			outputs: 'Outputs',
+			error: 'Error',
+			model: 'Model',
+			duration: 'Duration',
+			tokens: 'Tokens',
+			offset: 'Starts at',
+			none: 'None'
+		},
+		roles: {
+			system: 'System',
+			user: 'User',
+			ai: 'Model'
+		},
+		stats: {
+			kpi: {
+				traces: 'Traces',
+				errorRate: 'Error rate',
+				p50: 'Latency P50',
+				p95: 'Latency P95',
+				ttftP50: 'TTFT P50',
+				ttftP95: 'TTFT P95',
+				tokens: 'Total tokens'
+			},
+			charts: {
+				volume: 'Trace volume',
+				latency: 'Latency percentiles',
+				tokens: 'Token usage'
+			},
+			series: {
+				success: 'Success',
+				error: 'Failed',
+				p50: 'P50',
+				p95: 'P95',
+				tokens: 'Tokens'
+			},
+			byName: 'By operation',
+			byModel: 'By model',
+			columns: {
+				time: 'Time',
+				calls: 'Calls',
+				errors: 'Failed',
+				errorRate: 'Error rate',
+				model: 'Model',
+				prompt: 'Input tokens',
+				completion: 'Output tokens',
+				total: 'Total tokens'
+			},
+			tableView: 'Table view',
+			chartView: 'Chart view',
+			empty: 'No traces in the selected time range.',
+			unavailable: 'Stats are temporarily unavailable (Elasticsearch error). The trace list is unaffected.'
+		}
 	},
 	auth: {
 		kicker: 'WELCOME TO THE WILDERNESS',
