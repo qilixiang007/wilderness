@@ -108,6 +108,23 @@ wilderness:
     stale-timeout-minutes: 10
     # 把完成的 trace 以缩进树打到日志
     log-enabled: ${TRACE_LOG_ENABLED:true}
+    store:
+      # 落库总开关：关闭后 trace 只走日志等其他出口
+      enabled: ${TRACE_STORE_ENABLED:true}
+      # 写入队列双重上限：条数 + 估算字节（输入输出不截断，必须按字节限内存）
+      queue-capacity: 2000
+      queue-max-bytes: 67108864
+      # 攒满 batch-size 条或等满 flush-interval-ms 就冲刷一批
+      batch-size: 100
+      flush-interval-ms: 500
+      retention-days: 7
+      retention-cron: "0 30 3 * * *"
+      es-index-prefix: wilderness-trace-spans
+    rocketmq:
+      # 与对话历史共用 ROCKETMQ_ENABLED；仅 mq profile 下 name-server 存在时才生效
+      enabled: ${ROCKETMQ_ENABLED:false}
+      topic: trace-topic
+      consumer-group: wilderness-trace-consumer
   nasa:
     # 权威数据落地：包内官方快照目录（resources/nasa/fact-sheet-snapshots.json）——太阳、八大行星、
     # 三颗卫星，及天狼星/参宿四、银河系/仙女座、猎户座/蟹状星云、哈雷彗星、谷神星共 8 个科普对象，
