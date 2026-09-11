@@ -7,7 +7,8 @@ spring:
   servlet:
     multipart:
       max-file-size: 10MB
-      max-request-size: 10MB
+      # 知识库支持一次提交一批(最多 5 个)，总请求体要能装下满批
+      max-request-size: 60MB
   datasource:
     url: jdbc:mysql://localhost:3307/wilderness?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
     username: wilderness

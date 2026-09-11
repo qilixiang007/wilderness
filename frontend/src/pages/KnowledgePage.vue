@@ -18,19 +18,38 @@ const MAX_KNOWLEDGE_FILES = 20
 // 知识库工作原理科普：query → 检索 → AI 作答，给非专业用户看的简化流程
 const flowSteps = tm('knowledge.flowSteps')
 
-// 文件上传入库
+// 文件上传入库：一次可选多个文件，一次请求整批提交。
+// 单个文件失败不影响同批其它文件，后端逐文件返回结果，这里按文件展示。
+const MAX_BATCH_SIZE = 5
+
 const uploading = ref(false)
-const uploadResult = ref(null)
+const batchResult = ref(null)
 const uploadError = ref('')
 
 async function onFileChange(event) {
-	const file = event.target.files[0]
-	if (!file) return
-	uploading.value = true
+	const files = Array.from(event.target.files)
+	event.target.value = ''
+	if (files.length === 0) return
+
 	uploadError.value = ''
-	uploadResult.value = null
+	batchResult.value = null
+	// 超出单批上限或配额放不下整批，前端直接拦住，不白跑一次请求（后端同样会整批拒）
+	if (files.length > MAX_BATCH_SIZE) {
+		uploadError.value = t('knowledge.batchTooMany', { max: MAX_BATCH_SIZE, count: files.length })
+		return
+	}
+	// 与已有文件同名属于覆盖重传，不占新名额（与后端 checkBatchQuota 规则一致）
+	const existingNames = new Set(myFiles.value.map((f) => f.fileName))
+	const newCount = new Set(files.map((f) => f.name).filter((name) => !existingNames.has(name))).size
+	const remaining = MAX_KNOWLEDGE_FILES - myFiles.value.length
+	if (newCount > remaining) {
+		uploadError.value = t('knowledge.batchOverQuota', { newCount, remaining: Math.max(0, remaining) })
+		return
+	}
+
+	uploading.value = true
 	try {
-		uploadResult.value = await api.uploadKnowledge(file)
+		batchResult.value = await api.uploadKnowledge(files)
 		loadFiles()
 	} catch (err) {
 		uploadError.value =
@@ -39,7 +58,6 @@ async function onFileChange(event) {
 				: err.message || t('knowledge.uploadFailed')
 	} finally {
 		uploading.value = false
-		event.target.value = ''
 	}
 }
 
@@ -140,6 +158,7 @@ watch(isLoggedIn, (v) => {
 						}}
 						<input
 							type="file"
+							multiple
 							accept=".txt,.md,.pdf,.docx,.xls,.xlsx"
 							:disabled="uploading || myFiles.length >= MAX_KNOWLEDGE_FILES"
 							@change="onFileChange"
@@ -148,14 +167,24 @@ watch(isLoggedIn, (v) => {
 					<span class="file-quota">
 						{{ $t('knowledge.fileQuota', { used: myFiles.length, max: MAX_KNOWLEDGE_FILES }) }}
 					</span>
-					<span v-if="uploadResult" class="upload-ok">
-						{{ $t('knowledge.uploaded', { fileName: uploadResult.fileName, chunkCount: uploadResult.chunkCount }) }}
+					<span v-if="batchResult" :class="batchResult.failed > 0 ? 'upload-err' : 'upload-ok'">
+						{{ $t('knowledge.batchSummary', { succeeded: batchResult.succeeded, failed: batchResult.failed }) }}
 					</span>
 					<span v-if="uploadError" class="upload-err">{{ uploadError }}</span>
 				</template>
 				<RouterLink v-else class="upload-btn login-to-upload" :to="'/login?redirect=/knowledge'">
 					{{ $t('auth.loginToUpload') }}
 				</RouterLink>
+			</div>
+
+			<div v-if="batchResult" class="batch-result">
+				<div v-for="(item, i) in batchResult.items" :key="i" class="batch-row">
+					<span class="file-name" :title="item.fileName">{{ item.fileName }}</span>
+					<span v-if="item.success" class="batch-ok">
+						{{ $t('knowledge.batchItemOk', { chunkCount: item.result.chunkCount }) }}
+					</span>
+					<span v-else class="batch-fail" :title="item.error">{{ item.error }}</span>
+				</div>
 			</div>
 
 			<div v-if="isLoggedIn" class="file-list">
@@ -322,6 +351,32 @@ watch(isLoggedIn, (v) => {
 
 .file-quota {
 	font-size: 0.78rem;
+	color: var(--muted);
+}
+
+.batch-result {
+	margin: 0.2rem 0 0.6rem;
+}
+
+.batch-row {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.3rem 0;
+	font-size: 0.82rem;
+}
+
+.batch-ok {
+	flex-shrink: 0;
+	color: var(--accent);
+}
+
+.batch-fail {
+	flex-shrink: 0;
+	max-width: 60%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	color: var(--muted);
 }
 

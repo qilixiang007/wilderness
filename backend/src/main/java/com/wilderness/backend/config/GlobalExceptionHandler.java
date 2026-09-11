@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -46,6 +47,24 @@ public class GlobalExceptionHandler {
 				.map(f -> f.getField() + ": " + f.getDefaultMessage())
 				.orElse("Validation failed");
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.fail(message));
+	}
+
+	/**
+	 * 业务校验失败（如「不支持的文件类型」「上传文件为空」）→ 400，并把具体原因带给前端。
+	 * 不加这个 handler 的话会落到下面的通用兜底，变成 500 + "Internal server error"，
+	 * 真实原因被吞掉——知识库上传的逐文件失败提示全靠这条。
+	 */
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
+		String message = (ex.getMessage() == null || ex.getMessage().isBlank()) ? "请求参数不合法" : ex.getMessage();
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.fail(message));
+	}
+
+	/** 上传体积超过 multipart 上限 → 400（同样避免落到通用兜底变成 500）。 */
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public ResponseEntity<ApiResponse<Void>> handleUploadTooLarge() {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(ApiResponse.fail("上传文件体积超出限制，请减少文件数量或压缩后重试"));
 	}
 
 	/** 请求体 JSON 解析失败（如字段类型不匹配）→ 400。 */
