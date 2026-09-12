@@ -8,7 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
 import java.util.Arrays;
 
@@ -17,9 +17,13 @@ import java.util.Arrays;
  * 对所有 /api/** 请求「可选解析」登录态——有会话 Cookie 就把 userId 写入
  * {@link AuthContext}，没有则保持未登录；仅对 REQUIRED 路径强制要求登录。
  * 401 异常交给全局异常处理器统一包装为 ApiResponse。
+ *
+ * <p>实现 {@link AsyncHandlerInterceptor} 而非 HandlerInterceptor：SSE 接口返回
+ * SseEmitter 后容器会提前释放请求线程，此时只触发 afterConcurrentHandlingStarted、
+ * 不触发 afterCompletion——两个出口都得清理，否则 userId 会残留在 Tomcat 线程上。
  */
 @Component
-public class AuthInterceptor implements HandlerInterceptor {
+public class AuthInterceptor implements AsyncHandlerInterceptor {
 
 	private static final Logger log = LoggerFactory.getLogger(AuthInterceptor.class);
 
@@ -47,6 +51,11 @@ public class AuthInterceptor implements HandlerInterceptor {
 
 	@Override
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+		// 进门第一件事：无条件清空上一个请求可能残留在本线程上的身份。
+		// 必须排在所有 early return 之前——OPTIONS 预检虽然到不了 Controller，
+		// 但仍会继续走 RateLimitInterceptor，那里要读 AuthContext 做限流分桶。
+		AuthContext.clear();
+
 		// CORS 预检请求直接放行
 		if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
 			return true;
@@ -72,6 +81,18 @@ public class AuthInterceptor implements HandlerInterceptor {
 		return true;
 	}
 
+	/**
+	 * 异步（SSE）请求的出口：handler 返回 SseEmitter 后容器立刻释放请求线程去接待别的请求，
+	 * DispatcherServlet 此时走的是本回调而不是 afterCompletion。不在这里清理，
+	 * userId 就会跟着线程回到 Tomcat 线程池，被下一个复用该线程的请求读到。
+	 */
+	@Override
+	public void afterConcurrentHandlingStarted(HttpServletRequest request, HttpServletResponse response,
+			Object handler) {
+		AuthContext.clear();
+	}
+
+	/** 同步请求、以及 SSE 结束后那次 ASYNC 重新分发的出口。 */
 	@Override
 	public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
 			Object handler, Exception ex) {
