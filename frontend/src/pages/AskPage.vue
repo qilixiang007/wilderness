@@ -1,14 +1,35 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onActivated, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, openChatStream } from '../api'
 import MarkdownView from '../components/MarkdownView.vue'
 import { useAuth } from '../composables/useAuth'
 
-const { t, tm } = useI18n()
-const { isLoggedIn } = useAuth()
+defineOptions({ name: 'AskPage' })
 
-const suggestions = computed(() => tm('ask.suggestions'))
+const { t, tm } = useI18n()
+const { user, isLoggedIn } = useAuth()
+
+// —— 试试这样问：题库随机抽 3 条，"换一批"从剩余问题里抽，不与当前显示的重复 ——
+const allSuggestions = computed(() => tm('ask.suggestions'))
+const shownSuggestions = ref([])
+
+function pickSuggestions() {
+	const pool = allSuggestions.value.filter((q) => !shownSuggestions.value.includes(q))
+	// 剩余问题不够 3 条(题库快抽完一轮)时,从全量题库里补,允许再次出现
+	const source = pool.length >= 3 ? pool : allSuggestions.value
+	const picked = []
+	const candidates = [...source]
+	while (picked.length < 3 && candidates.length > 0) {
+		const i = Math.floor(Math.random() * candidates.length)
+		picked.push(candidates.splice(i, 1)[0])
+	}
+	shownSuggestions.value = picked
+}
+
+pickSuggestions()
+// 切换语言时题库文本跟着变(zh.js/en.js 各一份)，已展示的旧语言文案要重新抽一批新语言的
+watch(allSuggestions, pickSuggestions)
 
 // 同一篇资料被检索出多个片段时，标题会完全相同——加个"第几段"后缀区分开
 function knowledgeSources(msg) {
@@ -32,6 +53,9 @@ const recentLoading = ref(false)
 const recentExpandedId = ref(null)
 
 const recentHasMore = computed(() => recentHistory.value.length < recentTotal.value)
+// 倒序展示：最老的（当前已加载范围内）在上，最新的在下——挨着"新对话"/输入框，
+// 跟"查看更多"往上加载更早记录的方向一致，读起来像聊天记录往下滚到最新。
+const recentHistoryDisplay = computed(() => [...recentHistory.value].reverse())
 
 async function loadRecentHistory() {
 	if (!isLoggedIn.value) return
@@ -40,6 +64,11 @@ async function loadRecentHistory() {
 		const res = await api.getHistory(0, recentSize.value, '')
 		recentHistory.value = res.items
 		recentTotal.value = res.totalElements
+		// 默认展开最近一条，避免一进来看到的全是折叠标题——还得点一下才能看到内容。
+		// 只在当前没有任何展开项时才这么做，不覆盖用户自己手动收起/展开的选择。
+		if (recentExpandedId.value == null && recentHistory.value.length) {
+			recentExpandedId.value = recentHistory.value[0].id
+		}
 	} catch {
 		// 静默失败：这是锦上添花的预览区块，出错就不显示，不打扰主问答流程
 		recentHistory.value = []
@@ -62,11 +91,18 @@ onMounted(() => {
 	loadRecentHistory()
 })
 
+// KeepAlive 下 onMounted 只会在首次创建时触发一次，之后每次切回来都是"激活"而不是重新挂载，
+// 不会自动刷新历史；最近历史预览常驻展示（不只在空状态才显示），所以每次激活都重新拉一次。
+onActivated(() => {
+	loadRecentHistory()
+})
+
 const messages = ref([]) // { role: 'user' | 'assistant', content, sources }
 const input = ref('')
 const streaming = ref(false)
 const webSearch = ref(false)
 const chatBox = ref(null)
+let currentStream = null // 当前 EventSource，供"新对话"/登出清理主动关闭
 
 async function scrollToBottom() {
 	await nextTick()
@@ -87,7 +123,7 @@ function send() {
 	streaming.value = true
 	scrollToBottom()
 
-	openChatStream(question, {
+	currentStream = openChatStream(question, {
 		webEnabled: webSearch.value,
 		onRetrievalDegraded: () => {
 			assistantMsg.retrievalDegraded = true
@@ -101,9 +137,34 @@ function send() {
 		},
 		onDone: () => {
 			streaming.value = false
+			currentStream = null
 		}
 	})
 }
+
+// "新对话"：关闭进行中的流（若有），清空当前会话。未完成的回答不会被后端记录
+// （历史只在自然说完时落库），这是预期行为。
+function newConversation() {
+	currentStream?.close()
+	currentStream = null
+	streaming.value = false
+	messages.value = []
+	input.value = ''
+}
+
+// 登出/切换账号：清空本页会话状态和最近历史，避免同一 tab 下一个登录用户看到上一个用户的对话
+watch(() => user.value?.id, (newId) => {
+	currentStream?.close()
+	currentStream = null
+	streaming.value = false
+	messages.value = []
+	input.value = ''
+	recentHistory.value = []
+	recentTotal.value = 0
+	recentSize.value = RECENT_STEP
+	recentExpandedId.value = null
+	if (newId != null) loadRecentHistory() // 换了个已登录用户：拉取属于新用户的历史预览
+})
 </script>
 
 <template>
@@ -115,57 +176,78 @@ function send() {
 				<p>{{ $t('ask.intro') }}</p>
 			</div>
 
-			<div v-if="messages.length === 0" class="ask-empty">
-				<div v-if="isLoggedIn && recentHistory.length" class="ask-recent">
-					<p class="ask-recent-label">{{ $t('ask.recentHistory') }}</p>
-					<div class="history-item" v-for="item in recentHistory" :key="item.id">
-						<button class="history-item-head" type="button" @click="toggleRecent(item)">
-							<span class="history-question">{{ item.question }}</span>
-							<span class="history-time">{{ new Date(item.createdAt).toLocaleDateString() }}</span>
-						</button>
-						<div v-if="recentExpandedId === item.id" class="history-item-body">
-							<MarkdownView :content="item.answer" />
-							<div v-if="item.sources && item.sources.length" class="chat-sources">
-								<span class="sources-label">{{ $t('common.sources') }}</span>
-								<a
-									v-for="(s, si) in item.sources.filter((x) => x.type === 'web')"
-									:key="si"
-									:href="s.slug"
-									target="_blank"
-									rel="noopener"
-									class="source-chip"
-									:title="s.excerpt"
-								>
-									{{ s.title }}<span class="source-type">{{ s.type }}</span>
-								</a>
-								<RouterLink
-									v-for="(s, si) in knowledgeSources(item)"
-									:key="si"
-									:to="`/object/${s.slug}`"
-									class="source-chip"
-									:title="s.excerpt"
-								>
-									{{ sourceLabel(s, item) }}<span class="source-type">{{ s.type }}</span>
-								</RouterLink>
-							</div>
+			<!-- 最近历史：无论是否已有进行中的对话都常驻展示，不随聊天开始而收起 -->
+			<div v-if="isLoggedIn && recentHistory.length" class="ask-recent">
+				<p class="ask-recent-label">{{ $t('ask.recentHistory') }}</p>
+				<div v-if="recentHasMore" class="history-more">
+					<button
+						class="secondary-button"
+						type="button"
+						:disabled="recentLoading"
+						@click="loadMoreRecent"
+					>
+						{{ recentLoading ? $t('common.loading') : $t('ask.viewMoreHistory') }}
+					</button>
+				</div>
+				<div class="history-item" v-for="item in recentHistoryDisplay" :key="item.id">
+					<button class="history-item-head" type="button" @click="toggleRecent(item)">
+						<span class="history-question">{{ item.question }}</span>
+						<span class="history-time">{{ new Date(item.createdAt).toLocaleDateString() }}</span>
+					</button>
+					<div v-if="recentExpandedId === item.id" class="history-item-body">
+						<MarkdownView :content="item.answer" />
+						<div v-if="item.sources && item.sources.length" class="chat-sources">
+							<span class="sources-label">{{ $t('common.sources') }}</span>
+							<a
+								v-for="(s, si) in item.sources.filter((x) => x.type === 'web')"
+								:key="si"
+								:href="s.slug"
+								target="_blank"
+								rel="noopener"
+								class="source-chip"
+								:title="s.excerpt"
+							>
+								{{ s.title }}<span class="source-type">{{ s.type }}</span>
+							</a>
+							<RouterLink
+								v-for="(s, si) in knowledgeSources(item)"
+								:key="si"
+								:to="`/object/${s.slug}`"
+								class="source-chip"
+								:title="s.excerpt"
+							>
+								{{ sourceLabel(s, item) }}<span class="source-type">{{ s.type }}</span>
+							</RouterLink>
 						</div>
 					</div>
-					<div v-if="recentHasMore" class="history-more">
-						<button
-							class="secondary-button"
-							type="button"
-							:disabled="recentLoading"
-							@click="loadMoreRecent"
-						>
-							{{ recentLoading ? $t('common.loading') : $t('ask.viewMoreHistory') }}
-						</button>
-					</div>
 				</div>
+			</div>
 
-				<p>{{ $t('ask.tryAsking') }}</p>
+			<div v-if="messages.length > 0" class="ask-toolbar">
+				<button class="secondary-button" type="button" @click="newConversation">
+					{{ $t('ask.newConversation') }}
+				</button>
+			</div>
+
+			<!-- "试试这样问"常驻展示在上方，不随对话开始/进行中而收起 -->
+			<div class="ask-try">
+				<div class="ask-try-heading">
+					<p>{{ $t('ask.tryAsking') }}</p>
+					<button
+						class="shuffle-button"
+						type="button"
+						:title="$t('ask.shuffleSuggestions')"
+						:aria-label="$t('ask.shuffleSuggestions')"
+						@click="pickSuggestions"
+					>
+						<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6">
+							<path d="M17 10a7 7 0 1 1-2.3-5.2M17 3v4h-4" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+					</button>
+				</div>
 				<div class="ask-suggestions">
 					<button
-						v-for="q in suggestions"
+						v-for="q in shownSuggestions"
 						:key="q"
 						class="suggestion-chip"
 						type="button"
@@ -257,9 +339,15 @@ function send() {
 	min-height: 60vh;
 }
 
-.ask-empty {
+.ask-try {
 	margin: 1.5rem 0;
 	color: var(--muted);
+}
+
+.ask-toolbar {
+	display: flex;
+	justify-content: flex-end;
+	margin: -0.5rem 0 1rem;
 }
 
 .ask-recent {
@@ -325,6 +413,37 @@ function send() {
 	display: flex;
 	justify-content: center;
 	margin-top: 1rem;
+}
+
+.ask-try-heading {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.ask-try-heading p {
+	margin: 0;
+}
+
+.shuffle-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.6rem;
+	height: 1.6rem;
+	padding: 0;
+	border: 1px solid var(--button-border);
+	border-radius: 50%;
+	background: var(--button-bg);
+	color: var(--muted);
+	cursor: pointer;
+	transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.shuffle-button:hover {
+	background: var(--panel-glow);
+	color: var(--accent);
+	transform: rotate(50deg);
 }
 
 .ask-suggestions {

@@ -3,11 +3,15 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, openCompareStream } from '../api'
 import { COMPARE_MAX } from '../composables/useCompare'
+import { useAuth } from '../composables/useAuth'
 import { pick } from '../i18n'
 import MarkdownView from '../components/MarkdownView.vue'
 import ExplainResultCard from '../components/ExplainResultCard.vue'
 
+defineOptions({ name: 'ComparePage' })
+
 const route = useRoute()
+const { user } = useAuth()
 
 const slugs = ref([])
 
@@ -68,6 +72,8 @@ const tableRows = computed(() => {
 const pendingCount = computed(() => Math.max(0, slugs.value.length - compareItems.value.length))
 
 function load() {
+	if (route.path !== '/compare') return // 页面被 KeepAlive 挂起时 watcher 仍在跑，
+	                                        // 但此时 route 指向别的页面，query 不相关，直接忽略
 	const raw = route.query.slugs
 	const list = typeof raw === 'string' ? raw.split(',').map((s) => s.trim()).filter(Boolean) : []
 	slugs.value = [...new Set(list)].slice(0, COMPARE_MAX)
@@ -78,6 +84,17 @@ function load() {
 
 watch(() => route.query.slugs, load, { immediate: true })
 onBeforeUnmount(() => currentStream?.close())
+
+// 登出/切换账号：关闭进行中的对比流，清空对比状态，避免同一 tab 下一个用户看到上一个用户的对比内容
+watch(() => user.value?.id, () => {
+	currentStream?.close()
+	currentStream = null
+	slugs.value = []
+	objects.value = []
+	compareItems.value = []
+	overview.value = null
+	overviewStatus.value = 'idle'
+})
 </script>
 
 <template>
