@@ -25,6 +25,7 @@ const MAX_BATCH_SIZE = 5
 const uploading = ref(false)
 const batchResult = ref(null)
 const uploadError = ref('')
+const fileInputEl = ref(null)
 
 async function onFileChange(event) {
 	const files = Array.from(event.target.files)
@@ -33,9 +34,14 @@ async function onFileChange(event) {
 
 	uploadError.value = ''
 	batchResult.value = null
-	// 超出单批上限或配额放不下整批，前端直接拦住，不白跑一次请求（后端同样会整批拒）
+	// 超出单批上限：浏览器原生选择框没法限制勾选数量，只能选完之后再拦——
+	// 用弹窗代替行内文字提示，并提供"重新选择"直接拉起选择框，省得用户自己再点一次上传按钮。
 	if (files.length > MAX_BATCH_SIZE) {
-		uploadError.value = t('knowledge.batchTooMany', { max: MAX_BATCH_SIZE, count: files.length })
+		const reselect = await confirm(
+			t('knowledge.batchTooMany', { max: MAX_BATCH_SIZE, count: files.length }),
+			{ confirmText: t('knowledge.reselect'), cancelText: t('common.cancel') }
+		)
+		if (reselect) fileInputEl.value?.click()
 		return
 	}
 	// 与已有文件同名属于覆盖重传，不占新名额（与后端 checkBatchQuota 规则一致）
@@ -157,6 +163,7 @@ watch(isLoggedIn, (v) => {
 								: $t('knowledge.uploadFile')
 						}}
 						<input
+							ref="fileInputEl"
 							type="file"
 							multiple
 							accept=".txt,.md,.pdf,.docx,.xls,.xlsx"
@@ -166,6 +173,7 @@ watch(isLoggedIn, (v) => {
 					</label>
 					<span class="file-quota">
 						{{ $t('knowledge.fileQuota', { used: myFiles.length, max: MAX_KNOWLEDGE_FILES }) }}
+						· {{ $t('knowledge.uploadHint', { max: MAX_BATCH_SIZE }) }}
 					</span>
 					<span v-if="batchResult" :class="batchResult.failed > 0 ? 'upload-err' : 'upload-ok'">
 						{{ $t('knowledge.batchSummary', { succeeded: batchResult.succeeded, failed: batchResult.failed }) }}
@@ -177,13 +185,10 @@ watch(isLoggedIn, (v) => {
 				</RouterLink>
 			</div>
 
-			<div v-if="batchResult" class="batch-result">
-				<div v-for="(item, i) in batchResult.items" :key="i" class="batch-row">
+			<div v-if="batchResult && batchResult.failed > 0" class="batch-result">
+				<div v-for="(item, i) in batchResult.items.filter((x) => !x.success)" :key="i" class="batch-row">
 					<span class="file-name" :title="item.fileName">{{ item.fileName }}</span>
-					<span v-if="item.success" class="batch-ok">
-						{{ $t('knowledge.batchItemOk', { chunkCount: item.result.chunkCount }) }}
-					</span>
-					<span v-else class="batch-fail" :title="item.error">{{ item.error }}</span>
+					<span class="batch-fail" :title="item.error">{{ item.error }}</span>
 				</div>
 			</div>
 

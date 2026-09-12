@@ -110,7 +110,11 @@ watch(() => route.path, updateTitle, { immediate: true })
 
 			<BackButton v-if="route.path !== '/'" />
 
-			<RouterView />
+			<RouterView v-slot="{ Component }">
+				<KeepAlive :include="['AskPage', 'ComparePage', 'AgentPage']">
+					<component :is="Component" />
+				</KeepAlive>
+			</RouterView>
 		</div>
 
 		<CompareBar />

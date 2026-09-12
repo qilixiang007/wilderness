@@ -731,6 +731,11 @@ button {
 	color: var(--muted);
 }
 
+.detail-missing a {
+	color: var(--accent);
+	text-decoration: underline;
+}
+
 /* 数据卡片 · 档案式排版 */
 .facts-list {
 	display: grid;

@@ -2,7 +2,7 @@
 // 天体生成 Agent 页面（独立一级模块）：
 // 类型 chips + 参数表单 + 自然语言描述三者结合输入 → 后端 Agent 检索真实天体作参考 → 生成结果。
 // 结果展示：Agent 执行轨迹 → 天体视觉（文生图或 SVG）→ 参数卡片 → Markdown 介绍 → 参考来源跳转。
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onActivated, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MarkdownView from '../components/MarkdownView.vue'
 import CelestialVisual from '../components/CelestialVisual.vue'
@@ -12,6 +12,8 @@ import { api, ApiUnavailableError } from '../api'
 import { useAuth } from '../composables/useAuth'
 import { useFavorites } from '../composables/useFavorites'
 import { useConfirm } from '../composables/useConfirm'
+
+defineOptions({ name: 'AgentPage' })
 
 const { t, tm } = useI18n()
 const { confirm } = useConfirm()
@@ -74,6 +76,12 @@ async function loadAgents() {
 }
 
 onMounted(async () => {
+	await refreshMe()
+	loadAgents()
+})
+// KeepAlive 下 onMounted 只在首次创建时触发一次，之后每次切回来是"激活"——
+// 登录状态和"我的智能体"列表可能在离开期间发生变化（比如别处登出），激活时重新拉一次。
+onActivated(async () => {
 	await refreshMe()
 	loadAgents()
 })

@@ -57,7 +57,11 @@ async function onToggleGeneration(item) {
 			</div>
 
 			<template v-if="activeTab === 'natural'">
-				<p v-if="favorites.length === 0" class="detail-missing">{{ $t('favorites.empty') }}</p>
+				<i18n-t v-if="favorites.length === 0" keypath="favorites.empty" tag="p" class="detail-missing">
+					<template #link>
+						<RouterLink to="/">{{ $t('favorites.emptyLinkText') }}</RouterLink>
+					</template>
+				</i18n-t>
 
 				<div v-else class="card-grid object-card-grid">
 					<ObjectCard v-for="object in favorites" :key="object.slug" :object="object">
@@ -74,7 +78,11 @@ async function onToggleGeneration(item) {
 			</template>
 
 			<template v-else>
-				<p v-if="generationFavorites.length === 0" class="detail-missing">{{ $t('favorites.generatedEmpty') }}</p>
+				<i18n-t v-if="generationFavorites.length === 0" keypath="favorites.generatedEmpty" tag="p" class="detail-missing">
+					<template #link>
+						<RouterLink to="/agent">{{ $t('favorites.generatedEmptyLinkText') }}</RouterLink>
+					</template>
+				</i18n-t>
 
 				<div v-else class="card-grid object-card-grid">
 					<GeneratedFavoriteCard
