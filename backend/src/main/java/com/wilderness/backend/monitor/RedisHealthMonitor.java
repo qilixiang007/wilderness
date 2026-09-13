@@ -1,6 +1,7 @@
 package com.wilderness.backend.monitor;
 
 import com.wilderness.backend.auth.EmailService;
+import com.wilderness.backend.config.AuthProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -20,15 +21,16 @@ public class RedisHealthMonitor {
 
 	private static final Logger log = LoggerFactory.getLogger(RedisHealthMonitor.class);
 	private static final String PING_KEY = "wilderness:health:ping";
-	private static final String ADMIN_EMAIL = "1105341151@qq.com";
 
 	private final StringRedisTemplate redis;
 	private final EmailService emailService;
+	private final AuthProperties authProperties;
 	private final AtomicBoolean healthy = new AtomicBoolean(true);
 
-	public RedisHealthMonitor(StringRedisTemplate redis, EmailService emailService) {
+	public RedisHealthMonitor(StringRedisTemplate redis, EmailService emailService, AuthProperties authProperties) {
 		this.redis = redis;
 		this.emailService = emailService;
+		this.authProperties = authProperties;
 	}
 
 	@Scheduled(fixedDelay = 30_000)
@@ -57,7 +59,7 @@ public class RedisHealthMonitor {
 
 	private void notify(String subject, String body) {
 		try {
-			emailService.sendAlert(ADMIN_EMAIL, subject, body);
+			emailService.sendAlert(authProperties.adminEmail(), subject, body);
 		} catch (Exception e) {
 			log.error("Redis 健康状态告警邮件发送失败", e);
 		}

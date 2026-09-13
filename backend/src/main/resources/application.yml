@@ -56,10 +56,11 @@ wilderness:
     code-ttl: 300
     verify-code-rate-limit: 60
     from: ${SMTP_FROM:}
-    require-email-verify: false
+    require-email-verify: true
     dev-code-log: ${AUTH_DEV_CODE_LOG:false}
     login-max-attempts: ${AUTH_LOGIN_MAX_ATTEMPTS:5}
     login-lock-seconds: ${AUTH_LOGIN_LOCK_SECONDS:900}
+    admin-email: ${WILDERNESS_ADMIN_EMAIL}
   ai:
     dashscope:
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1

@@ -28,9 +28,6 @@ public class AuthService {
 	private final LoginAttemptService loginAttemptService;
 	private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-	/** 管理员邮箱：不落库，登录/查询用户信息时按邮箱动态判定。 */
-	private static final String ADMIN_EMAIL = "1105341151@qq.com";
-
 	public AuthService(UserRepository userRepository,
 			VerifyCodeService verifyCodeService,
 			SessionService sessionService,
@@ -131,9 +128,9 @@ public class AuthService {
 		return new UserDTO(user.getId(), user.getEmail(), isAdmin(user.getEmail()));
 	}
 
-	/** 管理员身份不落库，登录时按邮箱动态判定。 */
+	/** 管理员身份不落库，登录时按邮箱动态判定；管理员邮箱来自配置（wilderness.auth.admin-email），不写死在代码里。 */
 	public boolean isAdmin(String email) {
-		return email != null && email.equalsIgnoreCase(ADMIN_EMAIL);
+		return email != null && email.equalsIgnoreCase(props.adminEmail());
 	}
 
 	/** 按 userId 判定管理员（查一次用户邮箱）；用户不存在视为非管理员。 */

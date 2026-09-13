@@ -102,6 +102,8 @@ services:
       AUTH_SESSION_TTL: ${AUTH_SESSION_TTL:-604800}
       # 证书就绪并开启 HTTPS 后，把 .env 里 AUTH_COOKIE_SECURE 改为 true 再重启
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      # 管理员邮箱：不给默认值，.env 缺失该项会直接启动失败（避免误回落到已公开的旧邮箱）
+      WILDERNESS_ADMIN_EMAIL: ${WILDERNESS_ADMIN_EMAIL:?请在 .env 设置 WILDERNESS_ADMIN_EMAIL（管理员账号邮箱）}
     # 不映射端口：公网流量统一走 frontend(nginx) 反代
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]

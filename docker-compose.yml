@@ -90,6 +90,8 @@ services:
       AUTH_SESSION_TTL: ${AUTH_SESSION_TTL:-604800}
       AUTH_DEV_CODE_LOG: ${AUTH_DEV_CODE_LOG:-false}
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      # 管理员邮箱：不给默认值，本地 .env 也需要填一个（随便用自己的邮箱即可，仅本地测试用）
+      WILDERNESS_ADMIN_EMAIL: ${WILDERNESS_ADMIN_EMAIL:?请在 .env 设置 WILDERNESS_ADMIN_EMAIL（本地随便填一个邮箱用于测试管理员功能）}
       GENERATED_IMAGES_DIR: /app/data/generated-images
     volumes:
       - generated-images-data:/app/data/generated-images

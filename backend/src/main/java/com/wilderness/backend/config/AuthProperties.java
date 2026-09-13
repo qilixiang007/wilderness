@@ -17,5 +17,6 @@ public record AuthProperties(
 		boolean requireEmailVerify, // 注册是否强制填邮箱验证码，默认 false
 		boolean devCodeLog,         // 开发期把验证码打到日志，便于无 SMTP 时手工测试
 		int loginMaxAttempts,       // 登录/验证码连续失败多少次触发锁定，默认 5
-		long loginLockSeconds) {    // 触发锁定后的锁定时长（秒），默认 900 = 15 分钟
+		long loginLockSeconds,      // 触发锁定后的锁定时长（秒），默认 900 = 15 分钟
+		String adminEmail) {        // 管理员邮箱：不落库，来自 ${WILDERNESS_ADMIN_EMAIL}，无默认值——缺失即启动失败
 }

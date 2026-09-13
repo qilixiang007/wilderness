@@ -15,3 +15,10 @@ spring:
 wilderness:
   nasa:
     enabled: false
+  auth:
+    # 生产环境这个值必须来自 ${WILDERNESS_ADMIN_EMAIL}（无默认值，缺失即启动失败）；
+    # 测试上下文里没有也不应该有真实管理员邮箱，随便给一个占位值满足绑定即可
+    admin-email: admin@test.local
+    # 生产已改为 true（防抢注）；现有注册相关测试测的是注册/登录机制本身，
+    # 不涉及邮箱验证这个开关，保持 false 才不用把每处 register(...) 调用都改成带 code
+    require-email-verify: false
