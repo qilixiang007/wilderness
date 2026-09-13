@@ -75,6 +75,11 @@ public class AiModelConfig {
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .temperature(0.2)
+                // 与上面阻塞模型一致的 45s。注意这一层只盖得住「上游连响应头都不给」:
+                // 底层 JdkHttpClient 把它映射到 JDK HttpRequest.timeout(),而流式走的是
+                // sendAsync + ofInputStream,响应头一到 future 就完成了,后续吐字不再受约束。
+                // 「吐了一半卡住」只能靠 AiController 的 SseEmitter 超时兜。
+                .timeout(Duration.ofSeconds(45))
                 .listeners(List.of(tracingListener))
                 .build();
     }

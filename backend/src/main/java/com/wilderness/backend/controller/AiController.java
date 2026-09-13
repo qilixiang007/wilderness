@@ -41,16 +41,47 @@ public class AiController {
     private final ObjectMapper objectMapper;
     private final Executor streamExecutor;
 
+    /**
+     * chat/stream 的连接超时。这条链路没有任何内部超时兜底——模型层的 timeout 只盖到响应头,
+     * 流一旦开始就不再约束——所以 emitter 超时是「模型吐了一半卡住」的唯一防线。
+     * 取 180s 是给长回答留足余量;外层 nginx proxy_read_timeout 300s 是硬上界。
+     */
+    static final long CHAT_STREAM_TIMEOUT_MS = 180_000L;
+
+    /**
+     * compare/stream 的连接超时。CompareService 内部已有 itemTimeout(60s)+overviewTimeout(60s)
+     * ≈120s 的上界,这里只做外层保险,必须大于它,否则会把正常的对比提前掐断。
+     */
+    static final long COMPARE_STREAM_TIMEOUT_MS = 150_000L;
+
+    private final long chatStreamTimeoutMs;
+
+    private final long compareStreamTimeoutMs;
+
     public AiController(RagService ragService,
                         CelestialAgentService celestialAgentService,
                         CompareService compareService,
                         ObjectMapper objectMapper,
                         @Qualifier("aiStreamExecutor") Executor streamExecutor) {
+        this(ragService, celestialAgentService, compareService, objectMapper, streamExecutor,
+                CHAT_STREAM_TIMEOUT_MS, COMPARE_STREAM_TIMEOUT_MS);
+    }
+
+    /** 供测试注入更短的超时,避免真实等待 180s。 */
+    AiController(RagService ragService,
+                 CelestialAgentService celestialAgentService,
+                 CompareService compareService,
+                 ObjectMapper objectMapper,
+                 Executor streamExecutor,
+                 long chatStreamTimeoutMs,
+                 long compareStreamTimeoutMs) {
         this.ragService = ragService;
         this.celestialAgentService = celestialAgentService;
         this.compareService = compareService;
         this.objectMapper = objectMapper;
         this.streamExecutor = streamExecutor;
+        this.chatStreamTimeoutMs = chatStreamTimeoutMs;
+        this.compareStreamTimeoutMs = compareStreamTimeoutMs;
     }
 
     /** AI 问答:混合检索(+可选联网)+ 生成,返回回答与引文来源。 */
@@ -69,25 +100,25 @@ public class AiController {
                                  @RequestParam(value = "webEnabled", defaultValue = "false") boolean webEnabled) {
         // 关键:检索发生在 executor 线程,ThreadLocal 不跨线程,必须在请求线程先取 userId
         Long userId = AuthContext.currentUserId();
-        SseEmitter emitter = new SseEmitter(0L);
+        SseSession session = new SseSession(new SseEmitter(chatStreamTimeoutMs), "chat/stream");
         try {
             streamExecutor.execute(() -> ragService.streamChat(
                     question,
                     webEnabled,
                     userId,
-                    chunk -> safeSend(emitter, "delta", chunk),
-                    sources -> safeSend(emitter, "sources", toJson(sources)),
+                    chunk -> session.send("delta", chunk),
+                    sources -> session.send("sources", toJson(sources)),
                     degraded -> {
                         if (degraded) {
-                            safeSend(emitter, "retrieval-status", toJson(Collections.singletonMap("degraded", true)));
+                            session.send("retrieval-status", toJson(Collections.singletonMap("degraded", true)));
                         }
                     },
-                    emitter::completeWithError,
-                    emitter::complete));
+                    session::fail,
+                    session::complete));
         } catch (RejectedExecutionException e) {
-            emitter.completeWithError(e);
+            session.fail(e);
         }
-        return emitter;
+        return session.emitter();
     }
 
     /** AI 讲解:针对单个天体,结合知识库资料生成科普讲解。 */
@@ -107,19 +138,19 @@ public class AiController {
                 .filter(s -> !s.isEmpty())
                 .toList();
         Long userId = AuthContext.currentUserId();
-        SseEmitter emitter = new SseEmitter(0L);
+        SseSession session = new SseSession(new SseEmitter(compareStreamTimeoutMs), "compare/stream");
         try {
             streamExecutor.execute(() -> compareService.compareStream(
                     slugs,
                     userId,
-                    item -> safeSend(emitter, "item", toJson(item)),
-                    overview -> safeSend(emitter, "overview", toJson(Collections.singletonMap("overview", overview))),
-                    emitter::completeWithError,
-                    emitter::complete));
+                    item -> session.send("item", toJson(item)),
+                    overview -> session.send("overview", toJson(Collections.singletonMap("overview", overview))),
+                    session::fail,
+                    session::complete));
         } catch (RejectedExecutionException e) {
-            emitter.completeWithError(e);
+            session.fail(e);
         }
-        return emitter;
+        return session.emitter();
     }
 
     /** 天体生成 Agent:描述/参数 → 检索真实天体作参考 → 生成虚拟天体的介绍与渲染参数。半公开,未登录可生成(不落历史)。 */
@@ -133,14 +164,6 @@ public class AiController {
             return objectMapper.writeValueAsString(o);
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    private void safeSend(SseEmitter emitter, String eventName, String data) {
-        try {
-            emitter.send(SseEmitter.event().name(eventName).data(data));
-        } catch (Exception e) {
-            emitter.completeWithError(e);
         }
     }
 }
