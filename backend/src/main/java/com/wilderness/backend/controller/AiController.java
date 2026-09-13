@@ -12,6 +12,7 @@ import com.wilderness.backend.dto.ExplainResponse;
 import com.wilderness.backend.dto.GenerateCelestialRequest;
 import com.wilderness.backend.dto.GenerationResult;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.MediaType;
@@ -58,6 +59,7 @@ public class AiController {
 
     private final long compareStreamTimeoutMs;
 
+    @Autowired
     public AiController(RagService ragService,
                         CelestialAgentService celestialAgentService,
                         CompareService compareService,
