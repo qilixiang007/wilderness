@@ -453,7 +453,7 @@ export default {
 		resendIn: '重新发送 ({s}s)',
 		codeSent: '验证码已发送到你的邮箱',
 		codeLogHint: '开发模式：验证码已记录到服务端日志（未发送邮件），请看后端控制台',
-		registerCodeOptional: '可留空（当前未要求邮箱验证）',
+		registerCodeOptional: '请填写邮箱收到的 6 位验证码',
 		tabPassword: '密码登录',
 		tabCode: '验证码登录',
 		login: '登录',

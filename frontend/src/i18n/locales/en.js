@@ -453,7 +453,7 @@ export default {
 		resendIn: 'Resend ({s}s)',
 		codeSent: 'Code sent to your email',
 		codeLogHint: 'Dev mode: code logged to server output (no email sent) — check the backend console',
-		registerCodeOptional: 'Optional (email verification not required)',
+		registerCodeOptional: 'Enter the 6-digit code sent to your email',
 		tabPassword: 'Password',
 		tabCode: 'Code',
 		login: 'Log in',
