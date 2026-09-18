@@ -195,7 +195,7 @@ async function removeCompare(record) {
 
 /** 对比历史条目头部标题：把对比的天体名拼起来，失败项用 slug 兜底。 */
 function compareTitle(record) {
-	return record.items.map((i) => (i.error ? i.slug : pick(i.zhName, i.enName))).join(' · ')
+	return record.items.map((i) => pick(i.zhName, i.enName) || i.slug).join(' · ')
 }
 
 const compareGroups = computed(() => {

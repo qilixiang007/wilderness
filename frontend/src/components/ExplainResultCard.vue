@@ -10,7 +10,7 @@ defineProps({
 
 <template>
 	<article class="info-card explain-card">
-		<h4>{{ item.error ? item.slug : pick(item.zhName, item.enName) }}</h4>
+		<h4>{{ pick(item.zhName, item.enName) || item.slug }}</h4>
 		<p v-if="item.error" class="load-error-text">{{ item.error }}</p>
 		<template v-else>
 			<MarkdownView :content="item.answer" />

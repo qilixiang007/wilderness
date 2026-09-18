@@ -99,6 +99,9 @@ class CompareServiceTest {
 
         CompareItemResult ghostItem = r.items().stream().filter(i -> i.slug().equals("ghost")).findFirst().orElseThrow();
         assertNotNull(ghostItem.error());
+        // 目录查得到,失败项也要带上名字,前端才不会退回显示 slug
+        assertEquals("幽灵星", ghostItem.zhName());
+        assertEquals("Ghost", ghostItem.enName());
         CompareItemResult earthItem = r.items().stream().filter(i -> i.slug().equals("earth")).findFirst().orElseThrow();
         assertNull(earthItem.error());
         assertEquals("综合总结", r.overview().get());

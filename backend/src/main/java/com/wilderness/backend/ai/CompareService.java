@@ -132,19 +132,27 @@ public class CompareService {
 
     /** 单个天体的讲解生成,任何异常都在此兜底降级为该项失败,绝不向上抛。 */
     private CompareItemResult safeExplain(String slug, Long userId) {
+        ObjectDetailDTO object = null;
         try {
-            ObjectDetailDTO object = celestialObjectService.findBySlug(slug);
+            object = celestialObjectService.findBySlug(slug);
             ExplainResponse explain = ragService.explain(slug, userId);
             return CompareItemResult.ok(slug, object.zhName(), object.enName(), explain.answer(), explain.sources(),
                     explain.retrievalDegraded());
         } catch (IllegalArgumentException e) {
-            return CompareItemResult.failed(slug, "该天体暂无知识库资料,无法生成讲解");
+            return failed(slug, object, "该天体暂无知识库资料,无法生成讲解");
         } catch (ResponseStatusException e) {
-            return CompareItemResult.failed(slug, "天体不存在: " + slug);
+            return failed(slug, object, "天体不存在: " + slug);
         } catch (Exception e) {
             log.warn("compare: slug={} 讲解生成失败", slug, e);
-            return CompareItemResult.failed(slug, "讲解生成失败,请稍后重试");
+            return failed(slug, object, "讲解生成失败,请稍后重试");
         }
+    }
+
+    /** 目录已查到就带上中英文名,失败卡片和对比历史才能显示"水星"而不是退回 slug。 */
+    private static CompareItemResult failed(String slug, ObjectDetailDTO object, String reason) {
+        return object == null
+                ? CompareItemResult.failed(slug, reason)
+                : CompareItemResult.failed(slug, object.zhName(), object.enName(), reason);
     }
 
     /** 只对成功项做综合;全部失败则直接返回 null,不发起 LLM 调用。 */

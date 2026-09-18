@@ -4,7 +4,8 @@ import java.util.List;
 
 /**
  * 对比中单个天体的结果。error 非空即该项已降级(讲解生成失败/超时/无资料),
- * 此时 zhName/enName/answer/sources 均为 null,前端据 error 展示友好提示。
+ * 此时 answer/sources 为 null,前端据 error 展示友好提示;zhName/enName 在目录能查到时仍会带上
+ * (如"无知识库资料"),查不到或超时时为 null,前端退回显示 slug。
  * retrievalDegraded=true 表示讲解正常生成了，但知识库检索失败，answer 未经知识库核实——
  * 跟 error 互斥（error 非空时 retrievalDegraded 恒为 false）。
  */
@@ -17,6 +18,10 @@ public record CompareItemResult(String slug, String zhName, String enName, Strin
 	}
 
 	public static CompareItemResult failed(String slug, String reason) {
-		return new CompareItemResult(slug, null, null, null, null, reason, false);
+		return failed(slug, null, null, reason);
+	}
+
+	public static CompareItemResult failed(String slug, String zhName, String enName, String reason) {
+		return new CompareItemResult(slug, zhName, enName, null, null, reason, false);
 	}
 }
