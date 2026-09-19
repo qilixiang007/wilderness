@@ -39,6 +39,9 @@ public class CompareService {
 
     private static final Logger log = LoggerFactory.getLogger(CompareService.class);
     private static final long DEFAULT_TIMEOUT_SECONDS = 60;
+    // 与前端 useCompare.js 的 COMPARE_MAX 保持一致：前端只是 UI 约束，接口本身也要兜底,
+    // 防止绕过前端直接拼 URL 传一长串 slug 打满并行讲解生成。
+    private static final int MAX_SLUGS = 4;
 
     private final RagService ragService;
     private final CelestialObjectService celestialObjectService;
@@ -97,6 +100,12 @@ public class CompareService {
             List<String> uniq = List.copyOf(new LinkedHashSet<>(slugs));
             if (uniq.size() < 2) {
                 IllegalArgumentException error = new IllegalArgumentException("请至少选择 2 个不同的天体");
+                root.fail(error);
+                onError.accept(error);
+                return;
+            }
+            if (uniq.size() > MAX_SLUGS) {
+                IllegalArgumentException error = new IllegalArgumentException("最多支持同时对比 " + MAX_SLUGS + " 个天体");
                 root.fail(error);
                 onError.accept(error);
                 return;

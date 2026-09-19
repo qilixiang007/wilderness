@@ -100,6 +100,9 @@ public class AiModelConfig {
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .temperature(0.7)
+                // 与上面问答用的 chatModel 一致:同步阻塞调用必须有底层超时兜底,
+                // 否则 DashScope 响应异常慢时,这次生成请求会没有上限地一直挂着。
+                .timeout(Duration.ofSeconds(45))
                 .listeners(List.of(tracingListener))
                 .build();
     }
