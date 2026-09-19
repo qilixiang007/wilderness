@@ -2,6 +2,7 @@ package com.wilderness.backend.controller;
 
 import com.wilderness.backend.ai.KnowledgeIngestionService;
 import com.wilderness.backend.ai.KnowledgeUploadService;
+import com.wilderness.backend.auth.AdminOnly;
 import com.wilderness.backend.auth.AuthContext;
 import com.wilderness.backend.common.ApiResponse;
 import com.wilderness.backend.dto.BatchUploadResult;
@@ -68,8 +69,10 @@ public class KnowledgeController {
     /**
      * 手动触发内置公共语料(knowledge/*.md)全量重新入库:先清空旧的公共语料块,
      * 再重新切块/向量化/写入。启动时若 ES 已有公共语料会自动跳过入库,改完语料文件后调这个接口刷新。
-     * 仅登录用户可调用。
+     * 仅管理员可调用(非管理员 403):先删后建,期间公共语料为空、中途失败会让讲解/对比全部查不到资料;
+     * 且每次都要把全部语料重新向量化,开放给普通用户既能清空公共知识库,也能被刷来消耗 token。
      */
+    @AdminOnly
     @PostMapping("/reingest")
     public ApiResponse<Integer> reingest() throws Exception {
         ingestionService.deletePublicCorpus();
