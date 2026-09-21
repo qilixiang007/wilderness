@@ -153,7 +153,7 @@ public class CelestialAgentService {
                     }
                 } catch (Exception e) {
                     // 文生图失败：记录但不打断，前端走 SVG
-                    tool.steps().add(new AgentStep("图像生成", "文生图失败，已回退程序化渲染：" + e.getMessage()));
+                    tool.addStep(new AgentStep("图像生成", "文生图失败，已回退程序化渲染：" + e.getMessage()));
                 }
             }
 
