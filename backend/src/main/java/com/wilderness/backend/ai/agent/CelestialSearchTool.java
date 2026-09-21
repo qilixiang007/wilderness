@@ -100,6 +100,11 @@ public class CelestialSearchTool {
         return List.copyOf(steps);
     }
 
+    /** 供调用方（如文生图失败降级）追加一条执行步骤；steps() 返回的是不可变副本，不能直接 add。 */
+    public void addStep(AgentStep step) {
+        steps.add(step);
+    }
+
     public List<AiSource> sources() {
         return List.copyOf(sources);
     }
