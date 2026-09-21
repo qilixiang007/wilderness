@@ -13,7 +13,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -54,7 +53,11 @@ public class ConversationHistoryService {
                 result.getNumber(), result.getSize());
     }
 
-    @Transactional
+    /**
+     * 不用 @Transactional:esWriter.delete 是同步网络调用(内部已吞异常,失败只记日志),
+     * 包一层事务只会让 findByIdAndUserId 取到的连接一直占用到 ES 调用结束才释放,
+     * 事务本身也管不到 ES 那一半。两次 repository 调用各自是 Spring Data JPA 自带的短事务。
+     */
     public void delete(Long userId, Long id) {
         ConversationMessage message = repository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "记录不存在"));
