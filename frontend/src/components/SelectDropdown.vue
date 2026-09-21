@@ -13,13 +13,31 @@ const emit = defineEmits(['update:modelValue'])
 
 const open = ref(false)
 const root = ref(null)
+const buttonEl = ref(null)
+const menuEl = ref(null)
+const menuStyle = ref({})
 
 const selectedLabel = computed(() => {
 	const option = props.options.find((item) => item.value === props.modelValue)
 	return option ? props.getLabel(option) : '选择'
 })
 
+// 菜单 Teleport 到 body、用 fixed 定位算出来的坐标渲染：
+// 页面里 .main-area 自身带 position:relative + z-index，会形成层叠上下文，
+// 把内部菜单的 z-index 都"锁"在它下面，导致菜单被 .sidebar（z-index 更高）盖住/裁切。
+// Teleport 出去之后菜单直接挂在 body 下，不再受任何祖先层叠上下文影响。
+function updatePosition() {
+	if (!buttonEl.value) return
+	const rect = buttonEl.value.getBoundingClientRect()
+	menuStyle.value = {
+		top: `${rect.bottom + 6}px`,
+		right: `${window.innerWidth - rect.right}px`,
+		minWidth: `${rect.width}px`
+	}
+}
+
 function toggle() {
+	if (!open.value) updatePosition()
 	open.value = !open.value
 }
 
@@ -28,11 +46,12 @@ function select(value) {
 	open.value = false
 }
 
-// 点击面板外任意处关闭
+// 点击面板外任意处关闭（菜单已 Teleport 到 body，要单独判断是否点在菜单内）
 function onClickOutside(event) {
-	if (open.value && root.value && !root.value.contains(event.target)) {
-		open.value = false
-	}
+	if (!open.value) return
+	if (root.value?.contains(event.target)) return
+	if (menuEl.value?.contains(event.target)) return
+	open.value = false
 }
 
 // Esc 关闭
@@ -40,13 +59,28 @@ function onKeydown(event) {
 	if (event.key === 'Escape') open.value = false
 }
 
-onMounted(() => document.addEventListener('click', onClickOutside))
-onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
+function onReposition() {
+	if (open.value) updatePosition()
+}
+
+onMounted(() => {
+	document.addEventListener('click', onClickOutside)
+	document.addEventListener('keydown', onKeydown)
+	window.addEventListener('resize', onReposition)
+	window.addEventListener('scroll', onReposition, true)
+})
+onBeforeUnmount(() => {
+	document.removeEventListener('click', onClickOutside)
+	document.removeEventListener('keydown', onKeydown)
+	window.removeEventListener('resize', onReposition)
+	window.removeEventListener('scroll', onReposition, true)
+})
 </script>
 
 <template>
-	<div ref="root" class="select-wrap" @keydown.esc="onKeydown">
+	<div ref="root" class="select-wrap">
 		<button
+			ref="buttonEl"
 			class="select-button"
 			type="button"
 			:aria-haspopup="'listbox'"
@@ -58,23 +92,25 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
 			<span class="chevron" :class="{ 'chevron-open': open }" aria-hidden="true"></span>
 		</button>
 
-		<Transition name="menu">
-			<ul v-if="open" class="select-menu" role="listbox">
-				<li
-					v-for="option in options"
-					:key="option.value"
-					role="option"
-					:aria-selected="option.value === modelValue"
-					class="select-menu-item"
-					:class="{ active: option.value === modelValue }"
-					@click="select(option.value)"
-				>
-					<slot name="item" :option="option">
-						{{ getLabel(option) }}
-					</slot>
-				</li>
-			</ul>
-		</Transition>
+		<Teleport to="body">
+			<Transition name="menu">
+				<ul v-if="open" ref="menuEl" class="select-menu" role="listbox" :style="menuStyle">
+					<li
+						v-for="option in options"
+						:key="option.value"
+						role="option"
+						:aria-selected="option.value === modelValue"
+						class="select-menu-item"
+						:class="{ active: option.value === modelValue }"
+						@click="select(option.value)"
+					>
+						<slot name="item" :option="option">
+							{{ getLabel(option) }}
+						</slot>
+					</li>
+				</ul>
+			</Transition>
+		</Teleport>
 	</div>
 </template>
 
@@ -119,11 +155,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
 }
 
 .select-menu {
-	position: absolute;
-	top: calc(100% + 6px);
-	right: 0;
-	z-index: 50;
-	min-width: 100%;
+	position: fixed;
+	z-index: 200;
 	list-style: none;
 	margin: 0;
 	padding: 5px;
