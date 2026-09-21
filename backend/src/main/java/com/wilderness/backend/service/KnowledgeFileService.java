@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -83,7 +82,12 @@ public class KnowledgeFileService {
 				doc.getCharCount(), doc.getChunkCount(), chunks);
 	}
 
-	@Transactional
+	/**
+	 * 不用 @Transactional:ES 删除是同步网络调用,包一层事务只会让 findByIdAndUserId
+	 * 取到的连接一直占用到 ES 调用结束才释放,而事务本身拦不住 ES/MySQL 间的不一致
+	 * (两套独立存储,Spring 事务原生就管不到 ES 那一半)。findByIdAndUserId 和 delete(doc)
+	 * 各自是 Spring Data JPA 自带的短事务,用完立刻还连接池。
+	 */
 	public void delete(Long id, Long userId) throws Exception {
 		KnowledgeDocument doc = repository.findByIdAndUserId(id, userId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "文件不存在"));
